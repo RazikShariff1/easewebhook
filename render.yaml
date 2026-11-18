@@ -37,9 +37,9 @@ services:
       - key: DB_MAX_IDLE_CONNECTION
         value: "2"
       # Public URL of this service + /e, shown as each source's URL.
-      # Update it if Render assigns a different hostname than easewebhook-api.onrender.com.
+      # Update it if Render assigns a different hostname than easewebhook.onrender.com.
       - key: PUBLIC_INGEST_BASE_URL
-        value: https://easewebhook-api.onrender.com/e
+        value: https://easewebhook.onrender.com/e
       - key: JWT_SECRET
         generateValue: true
       - key: GOOGLE_CLIENT_ID
