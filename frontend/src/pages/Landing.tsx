@@ -389,25 +389,25 @@ function LatencyChart({ stats }: { stats?: PublicStats }) {
 
 // Providers pinned to the globe (longitude, latitude in degrees). Ones with live production traffic glow.
 const GLOBE_NODES: { n: string; id: string; lon: number; lat: number }[] = [
-  { n: "Shopify", id: "SHOPIFY", lon: 0, lat: 38 },
-  { n: "Stripe", id: "STRIPE", lon: 32, lat: 58 },
-  { n: "GitHub", id: "GITHUB", lon: 62, lat: 30 },
-  { n: "Razorpay", id: "RAZORPAY", lon: 95, lat: 50 },
-  { n: "Slack", id: "SLACK", lon: 125, lat: 24 },
-  { n: "Paddle", id: "PADDLE", lon: 152, lat: 62 },
-  { n: "Linear", id: "LINEAR", lon: 182, lat: 36 },
-  { n: "Vercel", id: "VERCEL", lon: 212, lat: 54 },
-  { n: "Twilio", id: "TWILIO", lon: 240, lat: 26 },
-  { n: "Clerk", id: "CLERK", lon: 268, lat: 60 },
-  { n: "Typeform", id: "TYPEFORM", lon: 298, lat: 34 },
-  { n: "Zendesk", id: "ZENDESK", lon: 328, lat: 52 },
+  { n: "Shopify", id: "SHOPIFY", lon: 0, lat: 40 },
+  { n: "Stripe", id: "STRIPE", lon: 30, lat: -28 },
+  { n: "GitHub", id: "GITHUB", lon: 60, lat: 18 },
+  { n: "Razorpay", id: "RAZORPAY", lon: 92, lat: -46 },
+  { n: "Slack", id: "SLACK", lon: 120, lat: 52 },
+  { n: "Paddle", id: "PADDLE", lon: 150, lat: -12 },
+  { n: "Linear", id: "LINEAR", lon: 180, lat: 30 },
+  { n: "Vercel", id: "VERCEL", lon: 210, lat: -40 },
+  { n: "Twilio", id: "TWILIO", lon: 240, lat: 8 },
+  { n: "Clerk", id: "CLERK", lon: 270, lat: 56 },
+  { n: "Typeform", id: "TYPEFORM", lon: 300, lat: -22 },
+  { n: "Zendesk", id: "ZENDESK", lon: 330, lat: 22 },
 ];
 
 const GW = 440; // globe viewBox
 const GH = 250;
 const G = { cx: 220, cy: 236, r: 196 };
-const TILT_MIN = 6;
-const TILT_MAX = 50;
+const TILT_MIN = -75; // tilt fully: north pole to south pole
+const TILT_MAX = 75;
 
 /** Orthographic projection of (lon, lat) on a sphere spun by `rot` and tilted `tilt` degrees toward the viewer. */
 function project(lon: number, lat: number, rot: number, tilt: number) {
@@ -529,8 +529,6 @@ function useGlobeControls(autoDegPerSec: number) {
   return { view, handlers, wasDrag: () => s.current.moved > 6 };
 }
 
-/** Squeeze latitude into the band the dome shows (the southern hemisphere is below the fold). */
-const displayLat = (lat: number) => 8 + ((Math.max(-50, Math.min(70, lat)) + 50) / 120) * 62;
 
 type GlobeTip = { x: number; y: number; title: string; sub: string; tone: "origin" | "live" | "plain" };
 
@@ -544,8 +542,7 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
   const rot = (((view.rot + offset) % 360) + 360) % 360;
   const tilt = view.tilt;
   const meridians = range(0, 330, 30).map((lon) => arc(range(-90, 90, 5).map((lat) => [lon, lat]), rot, tilt));
-  const parallels = range(-60, 75, 15).map((lat) => arc(range(0, 360, 5).map((lon) => [lon, lat]), rot, tilt));
-  const rim = `M${G.cx - G.r} ${G.cy} A${G.r} ${G.r} 0 0 1 ${G.cx + G.r} ${G.cy}`;
+  const parallels = range(-75, 75, 15).map((lat) => arc(range(0, 360, 5).map((lon) => [lon, lat]), rot, tilt));
   const nodes = GLOBE_NODES.map((n) => ({ ...n, ...project(n.lon, n.lat, rot, tilt), live: live.includes(n.id) }))
     .filter((n) => n.z > 0.05)
     .sort((a, b) => a.z - b.z); // nearer nodes paint on top
@@ -554,7 +551,7 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
     .filter((o) => COUNTRY_CENTRE[o.country])
     .map((o) => {
       const [lat, lon] = COUNTRY_CENTRE[o.country];
-      return { ...o, ...project(lon, displayLat(lat), rot, tilt), r: 3.5 + 4.5 * Math.sqrt(o.requests / peakOrigin) };
+      return { ...o, ...project(lon, lat, rot, tilt), r: 3.5 + 4.5 * Math.sqrt(o.requests / peakOrigin) };
     })
     .filter((o) => o.z > 0.05);
 
@@ -596,7 +593,7 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
             : "No webhook traffic in the last 30 days yet."
         }`}
         {...handlers}
-        onClick={(e) => e.target === e.currentTarget && setPinned(undefined)}
+        onClick={(e) => (e.target as Element).classList.contains("gbg") && !wasDrag() && setPinned(undefined)}
       >
         <defs>
           <radialGradient id="lp-gfill" cx="50%" cy="20%" r="80%">
@@ -604,18 +601,20 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
             <stop offset="100%" stopColor="#f3f3f1" />
           </radialGradient>
           <linearGradient id="lp-gfade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="65%" stopColor="#fff" stopOpacity="1" />
+            <stop offset="62%" stopColor="#fff" stopOpacity="1" />
             <stop offset="100%" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
           <mask id="lp-gmask"><rect width={GW} height={GH} fill="url(#lp-gfade)" /></mask>
         </defs>
+        {/* full-size transparent layer: the whole area (faded part included) takes drags */}
+        <rect width={GW} height={GH} fill="transparent" className="gbg" />
         <g mask="url(#lp-gmask)">
           <circle cx={G.cx} cy={G.cy} r={G.r} fill="url(#lp-gfill)" onClick={() => !wasDrag() && setPinned(undefined)} />
           <g className="gl">
             {parallels.map((d, i) => <path key={`p${i}`} d={d} />)}
             {meridians.map((d, i) => <path key={`m${i}`} d={d} />)}
           </g>
-          <path d={rim} className="rim" />
+          <circle cx={G.cx} cy={G.cy} r={G.r} className="rim" pointerEvents="none" />
           {originPts.map((o) => (
             <g
               key={o.country}
@@ -669,7 +668,7 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
         <span><i className="origin" /> WEBHOOK ORIGINS{origins.length ? ` · ${origins.length} ${origins.length === 1 ? "COUNTRY" : "COUNTRIES"}` : ""}</span>
         <span><i className="live" /> PROVIDER WITH TRAFFIC</span>
         <span><i /> SUPPORTED</span>
-        <span className="hint">DRAG TO TURN</span>
+        <span className="hint">DRAG TO TURN · UP/DOWN TO TILT</span>
       </div>
     </div>
   );
