@@ -409,10 +409,10 @@ function DeliveryLog() {
 }
 
 const ENDPOINTS = [
-  { y: 36, name: "slack.com" },
-  { y: 105, name: "zendesk.com" },
-  { y: 175, name: "github.com" },
-  { y: 244, name: "twilio.com" },
+  { y: 36, name: "slack.com", logo: "slack" },
+  { y: 105, name: "zendesk.com", logo: "zendesk" },
+  { y: 175, name: "github.com", logo: "github" },
+  { y: 244, name: "twilio.com", logo: "twilio" },
 ];
 
 function SendDiagram() {
@@ -442,8 +442,8 @@ function SendDiagram() {
       {ENDPOINTS.map((n) => (
         <g key={n.name}>
           <rect x="590" y={n.y - 21} width="148" height="42" rx="21" className="pill" />
-          <circle cx="614" cy={n.y} r="4.5" className="okdot" />
-          <text x="630" y={n.y + 5} className="pt mono sm">{n.name}</text>
+          <image href={`/brands/${n.logo}.svg`} x="605" y={n.y - 10} width="20" height="20" />
+          <text x="634" y={n.y + 5} className="pt mono sm">{n.name}</text>
         </g>
       ))}
       <rect x="334" y="94" width="92" height="92" rx="18" className="hub" />
