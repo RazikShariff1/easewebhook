@@ -311,6 +311,14 @@ func (w *Worker) deliver(ctx context.Context, e *models.Event, dest *models.Dest
 		return a
 	}
 
+	// A Mock API destination always goes to this server's own /mock endpoint, whatever URL was stored
+	// when it was created (another instance or environment may have created it with a different host).
+	if dest.Type == models.DestMockAPI && store.MockDestinationURL != "" {
+		d := *dest
+		d.URL = store.MockDestinationURL
+		dest = &d
+	}
+
 	target, err := buildURL(dest, e)
 	a.RequestedURL = target
 

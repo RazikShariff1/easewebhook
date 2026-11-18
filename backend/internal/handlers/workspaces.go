@@ -27,7 +27,7 @@ func (a *API) registerWorkspaces(app *gofr.App) {
 
 var errOwnerOnly = apierr.Error{Status: http.StatusForbidden, Message: "only workspace owners can do this"}
 
-func raw(c *gofr.Context) *store.Store { return store.New(c.SQL) }
+func raw(c *gofr.Context) *store.Store { return store.New(dbFor(c)) }
 
 // member checks the caller belongs to the path's workspace and returns their role.
 func member(c *gofr.Context) (wsID, role string, err error) {

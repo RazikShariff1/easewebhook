@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"gofr.dev/pkg/gofr"
+	gofrsql "gofr.dev/pkg/gofr/datasource/sql"
 
 	"github.com/zopping/easewebhook/backend/internal/auth"
 	"github.com/zopping/easewebhook/backend/internal/delivery"
@@ -92,11 +93,21 @@ func main() {
 			Password: app.Config.Get("DB_PASSWORD"),
 			Name:     app.Config.Get("DB_NAME"),
 			SSLMode:  app.Config.GetOrDefault("DB_SSL_MODE", "require"),
-			MaxOpen:  intConf(app, "DB_MAX_OPEN_CONNECTION", 10),
+			MaxOpen:  intConf(app, "DB_MAX_OPEN_CONNECTION", 5),
 		})
 		if err != nil {
 			return fmt.Errorf("opening database pool: %w", err)
 		}
+
+		// Supabase's session pooler allows only 15 client connections in total (production + local dev).
+		// GoFr's own pool now only serves migrations and the health check, so keep it to one connection.
+		if g, ok := c.SQL.(*gofrsql.DB); ok {
+			g.SetMaxOpenConns(1)
+			g.SetMaxIdleConns(1)
+		}
+
+		handlers.UseDB(pool)
+		authSvc.Pool = pool
 
 		s := store.New(pool)
 		st.Store(s)

@@ -30,13 +30,27 @@ type API struct {
 const noWorkspace = "__none__"
 
 // st returns the store scoped to the request's workspace (set by the auth middleware).
+// pool is the tuned database pool the store uses (see store.OpenPool); nil falls back to GoFr's connection.
+var pool store.DB
+
+// UseDB makes every handler query go through db instead of GoFr's default connection.
+func UseDB(db store.DB) { pool = db }
+
+func dbFor(c *gofr.Context) store.DB {
+	if pool != nil {
+		return pool
+	}
+
+	return c.SQL
+}
+
 func st(c *gofr.Context) *store.Store {
 	ws := auth.WorkspaceID(c)
 	if ws == "" {
 		ws = noWorkspace
 	}
 
-	return store.New(c.SQL).In(ws)
+	return store.New(dbFor(c)).In(ws)
 }
 
 func mapErr(err error, entity, id string) error {
@@ -158,6 +172,7 @@ func (a *API) Register(app *gofr.App) {
 
 	// Dashboard stats (24h counters shown on list pages)
 	app.GET("/stats", a.stats)
+	app.GET("/public/stats", func(c *gofr.Context) (any, error) { return store.New(dbFor(c)).PublicStats(c) })
 }
 
 // ---------------- Sources ----------------
@@ -633,7 +648,7 @@ func (a *API) retryRequest(c *gofr.Context) (any, error) {
 		return nil, err
 	}
 
-	created, ignored, err := ingest.FanOut(c, store.New(c.SQL), a.Log, req)
+	created, ignored, err := ingest.FanOut(c, store.New(dbFor(c)), a.Log, req)
 	if err != nil {
 		return nil, err
 	}
@@ -725,7 +740,7 @@ func (a *API) bulkRetryRequests(c *gofr.Context) (any, error) {
 			continue // raced with another retry
 		}
 
-		n, _, err := ingest.FanOut(c, store.New(c.SQL), a.Log, req)
+		n, _, err := ingest.FanOut(c, store.New(dbFor(c)), a.Log, req)
 		if err != nil {
 			return nil, err
 		}

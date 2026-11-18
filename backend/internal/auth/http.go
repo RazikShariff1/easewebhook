@@ -26,10 +26,11 @@ func needsWorkspace(path string) bool {
 
 // publicPaths don't need a session.
 var publicPaths = map[string]bool{
-	"/auth/signup": true,
-	"/auth/login":  true,
-	"/auth/google": true,
-	"/auth/config": true,
+	"/auth/signup":  true,
+	"/auth/login":   true,
+	"/auth/google":  true,
+	"/auth/config":  true,
+	"/public/stats": true,
 }
 
 func isPublic(path string) bool {
@@ -130,7 +131,7 @@ func (s *Service) Register(app *gofr.App) {
 			return nil, err
 		}
 
-		return s.Signup(c, c.SQL, in.Name, in.Email, in.Password)
+		return s.Signup(c, s.db(c.SQL), in.Name, in.Email, in.Password)
 	})
 
 	app.POST("/auth/login", func(c *gofr.Context) (any, error) {
@@ -139,7 +140,7 @@ func (s *Service) Register(app *gofr.App) {
 			return nil, err
 		}
 
-		return s.Login(c, c.SQL, in.Email, in.Password)
+		return s.Login(c, s.db(c.SQL), in.Email, in.Password)
 	})
 
 	app.POST("/auth/google", func(c *gofr.Context) (any, error) {
@@ -148,10 +149,10 @@ func (s *Service) Register(app *gofr.App) {
 			return nil, err
 		}
 
-		return s.Google(c, c.SQL, in.Credential)
+		return s.Google(c, s.db(c.SQL), in.Credential)
 	})
 
 	app.GET("/auth/me", func(c *gofr.Context) (any, error) {
-		return s.Me(c, c.SQL, UserID(c))
+		return s.Me(c, s.db(c.SQL), UserID(c))
 	})
 }

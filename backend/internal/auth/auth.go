@@ -59,6 +59,16 @@ type Service struct {
 	MemberRole func(ctx context.Context, workspaceID, userID string) (string, error)
 	// Onboard runs on every sign-in: accept invites, ensure the user has a workspace.
 	Onboard func(ctx context.Context, userID, email, name string) error
+	// Pool, when set, is used for user queries instead of GoFr's connection (see store.OpenPool).
+	Pool DB
+}
+
+func (s *Service) db(fallback DB) DB {
+	if s.Pool != nil {
+		return s.Pool
+	}
+
+	return fallback
 }
 
 var errUnauthorized = apierr.Error{Status: http.StatusUnauthorized, Message: "invalid email or password"}

@@ -23,7 +23,7 @@ type PoolConfig struct {
 //     string, number, bool or time, never []byte, so binary mode doesn't change how values are encoded.
 //   - idle connections equal open connections, so a burst of parallel API calls (a page load fires
 //     several) reuses warm connections instead of closing and reopening them; a new TLS + pooler
-//     login costs ~8 round trips.
+//     login costs ~8 round trips. Keep MaxOpen small: the pooler's client limit is shared.
 func OpenPool(ctx context.Context, c PoolConfig) (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s binary_parameters=yes connect_timeout=10",
 		quote(c.Host), quote(c.Port), quote(c.User), quote(c.Password), quote(c.Name), quote(c.SSLMode))
@@ -34,12 +34,14 @@ func OpenPool(ctx context.Context, c PoolConfig) (*sql.DB, error) {
 	}
 
 	if c.MaxOpen <= 0 {
-		c.MaxOpen = 10
+		c.MaxOpen = 5
 	}
 
 	db.SetMaxOpenConns(c.MaxOpen)
 	db.SetMaxIdleConns(c.MaxOpen)
-	db.SetConnMaxIdleTime(10 * time.Minute) // poolers drop long-idle clients; recycle before that
+	// Release connections idle for a few minutes: the pooler's client limit is shared by every
+	// instance (Supabase session mode: 15), so an idle server shouldn't sit on its whole pool.
+	db.SetConnMaxIdleTime(3 * time.Minute)
 	db.SetConnMaxLifetime(time.Hour)
 
 	pctx, cancel := context.WithTimeout(ctx, 15*time.Second)
