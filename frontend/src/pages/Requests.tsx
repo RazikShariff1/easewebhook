@@ -22,7 +22,8 @@ import { fmtDate, nextRange, requestStatusLabel, tryParseJSON, type RangeKey } f
 import { useWorkspace } from "../lib/workspace";
 import { PageHeader } from "../components/Layout";
 import { Badge, CopyText, Dropdown, ErrorBox, HttpBadge, Loading, StatusBadge, useAction, useToast } from "../components/ui";
-import { Histogram, RangePicker, rangeBounds } from "../components/Timeline";
+import { Histogram, RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
+import { useZoomRange } from "../lib/brush";
 import { REQUEST_SERIES } from "../components/StatusBarChart";
 import { JsonTree } from "../components/JsonTree";
 import { SourceTypeIcon } from "../components/SourceIcon";
@@ -110,6 +111,7 @@ export function RequestsPage({ preset = "all" }: { preset?: Preset }) {
     setSelected(undefined);
   }, [preset]);
   useEffect(() => setBounds(rangeBounds(range)), [range]);
+  const zoom = useZoomRange(range, setRange);
   useEffect(() => {
     const t = setTimeout(() => setSearch(searchInput), 350);
     return () => clearTimeout(t);
@@ -202,7 +204,8 @@ export function RequestsPage({ preset = "all" }: { preset?: Preset }) {
       </PageHeader>
 
       <div className="toolbar">
-        <RangePicker value={range} onChange={setRange} />
+        <ZoomOut onClick={zoom.back} />
+        <RangePicker value={range} onChange={zoom.pick} />
         <div className="search">
           <Search />
           <input className="input" placeholder="Search payload fields" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
@@ -255,7 +258,7 @@ export function RequestsPage({ preset = "all" }: { preset?: Preset }) {
         </Dropdown>
       </div>
 
-      {hist.data && <Histogram buckets={hist.data.buckets} from={bounds.from} to={bounds.to} series={REQUEST_SERIES} />}
+      {hist.data && <Histogram buckets={hist.data.buckets} from={bounds.from} to={bounds.to} series={REQUEST_SERIES} onSelect={zoom.zoom} />}
 
       {rows.length > 0 && (suggestions.length > 0 || cols.length > 0) && (
         <div className="suggest">

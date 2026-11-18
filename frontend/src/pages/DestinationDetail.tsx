@@ -6,7 +6,8 @@ import { useQuery } from "../lib/hooks";
 import { fmtDate, timeAgo, type RangeKey } from "../lib/format";
 import { Badge, CopyText, Empty, ErrorBox, HttpBadge, Loading, useAction } from "../components/ui";
 import { DestinationForm } from "../components/forms";
-import { RangePicker, rangeBounds } from "../components/Timeline";
+import { RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
+import { useZoomRange } from "../lib/brush";
 import { StatusBarChart } from "../components/StatusBarChart";
 import { DEST_TYPES, DestinationIcon } from "../components/DestinationIcon";
 
@@ -134,6 +135,7 @@ function MetricsPanel({ dest, compact }: { dest: Destination; compact?: boolean 
   const [range, setRange] = useState<RangeKey>(compact ? "1h" : "24h");
   const [bounds, setBounds] = useState(() => rangeBounds(range));
   useEffect(() => setBounds(rangeBounds(range)), [range]);
+  const zoom = useZoomRange(range, setRange);
 
   const hist = useQuery(
     () => api.get<{ buckets: HistogramBucket[] }>("/events/histogram", { destination_id: dest.id, from: bounds.from, to: bounds.to, buckets: 60 }),
@@ -151,7 +153,8 @@ function MetricsPanel({ dest, compact }: { dest: Destination; compact?: boolean 
       <div className="dd-head">
         <h2>Metrics overview</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          <RangePicker value={range} onChange={setRange} />
+          <ZoomOut onClick={zoom.back} />
+          <RangePicker value={range} onChange={zoom.pick} />
           <button className="btn" onClick={refresh}><RefreshCw size={14} /> Refresh</button>
         </div>
       </div>
@@ -165,7 +168,7 @@ function MetricsPanel({ dest, compact }: { dest: Destination; compact?: boolean 
           </div>
           <Link to={`/events?destination_id=${dest.id}`} className="dd-explore">Explore <ArrowUpRight size={15} /></Link>
         </div>
-        {hist.data ? <StatusBarChart buckets={hist.data.buckets} from={bounds.from} to={bounds.to} /> : <Loading />}
+        {hist.data ? <StatusBarChart buckets={hist.data.buckets} from={bounds.from} to={bounds.to} onSelect={zoom.zoom} /> : <Loading />}
       </div>
 
       <div className="dd-two">

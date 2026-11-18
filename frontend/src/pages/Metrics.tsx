@@ -4,12 +4,16 @@ import { useQuery } from "../lib/hooks";
 import { type RangeKey } from "../lib/format";
 import { PageHeader } from "../components/Layout";
 import { ErrorBox } from "../components/ui";
-import { Histogram, RangePicker, rangeBounds } from "../components/Timeline";
+import { RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
+import { StatusBarChart } from "../components/StatusBarChart";
+import { useZoomRange } from "../lib/brush";
+import { RefreshCw } from "lucide-react";
 
 export function MetricsPage() {
   const [range, setRange] = useState<RangeKey>("24h");
   const [bounds, setBounds] = useState(() => rangeBounds(range));
   useEffect(() => setBounds(rangeBounds(range)), [range]);
+  const zoom = useZoomRange(range, setRange);
 
   const hist = useQuery(
     () => api.get<{ buckets: HistogramBucket[] }>("/events/histogram", { from: bounds.from, to: bounds.to, buckets: 60 }),
@@ -31,7 +35,10 @@ export function MetricsPage() {
     <>
       <PageHeader title="Metrics" />
       <div className="toolbar">
-        <RangePicker value={range} onChange={setRange} />
+        <span style={{ flex: 1 }} />
+        <ZoomOut onClick={zoom.back} />
+        <RangePicker value={range} onChange={zoom.pick} />
+        <button className="btn" onClick={() => setBounds(rangeBounds(range))}><RefreshCw size={14} /> Refresh</button>
       </div>
       <div className="content">
         <ErrorBox error={hist.error} />
@@ -42,7 +49,17 @@ export function MetricsPage() {
           <Tile label="Pending" value={pending} color="var(--info)" />
           <Tile label="Success rate" value={rate == null ? "—" : `${rate}%`} />
         </div>
-        {hist.data && <Histogram buckets={hist.data.buckets} from={bounds.from} to={bounds.to} />}
+        <div style={{ padding: "0 24px" }}>
+          <div className="dd-card">
+            <div className="dd-card-head">
+              <div>
+                <div className="dd-card-title">Events by status</div>
+                <div className="faint small">Drag across the chart to zoom into a time range.</div>
+              </div>
+            </div>
+            {hist.data && <StatusBarChart buckets={hist.data.buckets} from={bounds.from} to={bounds.to} onSelect={zoom.zoom} />}
+          </div>
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: 16, padding: 24 }}>
           <Breakdown title="Requests by source (24h)" rows={(sources.data?.models ?? []).map((s) => [s.name, stats.data?.requests_24h[s.id] ?? 0])} />
           <Breakdown title="Delivery attempts by destination (24h)" rows={(dests.data?.models ?? []).map((d) => [d.name, stats.data?.attempts_24h[d.id] ?? 0])} />

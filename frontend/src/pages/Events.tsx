@@ -14,7 +14,8 @@ import { useQuery } from "../lib/hooks";
 import { fmtDate, pretty, timeAgo, tryParseJSON, type RangeKey } from "../lib/format";
 import { PageHeader } from "../components/Layout";
 import { CopyText, Dropdown, Empty, ErrorBox, HttpBadge, Loading, StatusBadge, useAction, useToast } from "../components/ui";
-import { Histogram, RangePicker, rangeBounds } from "../components/Timeline";
+import { Histogram, RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
+import { useZoomRange } from "../lib/brush";
 import { Pager, usePager } from "./Sources";
 
 const STATUSES: EventStatus[] = ["SUCCESSFUL", "FAILED", "QUEUED", "SCHEDULED", "HOLD", "CANCELLED"];
@@ -56,6 +57,7 @@ export function EventsPage({ preset }: { preset: Preset }) {
 
   const [bounds, setBounds] = useState(() => rangeBounds(range));
   useEffect(() => setBounds(rangeBounds(range)), [range]);
+  const zoom = useZoomRange(range, setRange);
 
   const filter = useMemo(
     () => ({
@@ -146,7 +148,8 @@ export function EventsPage({ preset }: { preset: Preset }) {
       </PageHeader>
 
       <div className="toolbar">
-        <RangePicker value={range} onChange={setRange} />
+        <ZoomOut onClick={zoom.back} />
+        <RangePicker value={range} onChange={zoom.pick} />
         <div className="search">
           <Search />
           <input className="input" placeholder="Search payload fields" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
@@ -168,7 +171,7 @@ export function EventsPage({ preset }: { preset: Preset }) {
         )}
       </div>
 
-      {hist.data && <Histogram buckets={hist.data.buckets} from={bounds.from} to={bounds.to} />}
+      {hist.data && <Histogram buckets={hist.data.buckets} from={bounds.from} to={bounds.to} onSelect={zoom.zoom} />}
 
       <div className={`split ${selected ? "with-panel" : ""}`} style={{ minHeight: 0 }}>
         <div className="content">
@@ -177,7 +180,8 @@ export function EventsPage({ preset }: { preset: Preset }) {
             <Loading />
           ) : rows.length === 0 ? (
             <Empty title="No matching events found">
-              <RangePicker value={range} onChange={setRange} />
+              <ZoomOut onClick={zoom.back} />
+        <RangePicker value={range} onChange={zoom.pick} />
             </Empty>
           ) : (
             <table className="table">

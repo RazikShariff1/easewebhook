@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Calendar, ChevronDown, ChevronLeft, ChevronRight, ZoomOut as ZoomOutIcon } from "lucide-react";
 import type { HistogramBucket } from "../lib/api";
 import { useFloating } from "../lib/floating";
-import { SERIES, type Series } from "./StatusBarChart";
+import { bucketRange, useBrush } from "../lib/brush";
+import { SERIES, tipTime, type Series } from "./StatusBarChart";
 import { customRange, fmtAxis, parseCustom, RANGES, rangeLabel, tzLabel, type RangeKey } from "../lib/format";
 
 export function rangeBounds(key: RangeKey) {
@@ -210,38 +211,52 @@ export function Histogram({
   from,
   to,
   series = SERIES,
+  onSelect,
 }: {
   buckets: HistogramBucket[];
   from: string;
   to: string;
   series?: Series[];
+  /** Called with the dragged time range; enables drag-to-zoom. */
+  onSelect?: (from: Date, to: Date) => void;
 }) {
-  const [hover, setHover] = useState<number>();
+  const times = buckets.map((b) => b.time);
+  const brush = useBrush(buckets.length, onSelect && ((a, b) => onSelect(...bucketRange(times, from, to, a, b))));
+  const hover = brush.hover;
+  const sel = brush.sel;
   const max = Math.max(1, ...buckets.map((b) => b.total));
   const span = new Date(to).getTime() - new Date(from).getTime();
   const ticks = 5;
   const tickTimes = Array.from({ length: ticks + 2 }, (_, i) => new Date(new Date(from).getTime() + (span * i) / (ticks + 1)).toISOString());
   const count = (b: HistogramBucket, s: Series) => s.statuses.reduce((a, st) => a + ((b.status as Record<string, number | undefined>)[st] ?? 0), 0);
+  const inSel = (i: number) => !!sel && i >= sel[0] && i <= sel[1];
+  const tipBuckets = sel ? buckets.slice(sel[0], sel[1] + 1) : hover !== undefined ? [buckets[hover]] : [];
+  const tipSeries = series
+    .map((s) => ({ s, v: tipBuckets.reduce((a, b) => a + count(b, s), 0) }))
+    .filter(({ s, v }) => v > 0 || s === series[0]);
+  const [rs, re] = sel ? bucketRange(times, from, to, sel[0], sel[1]) : [];
 
   return (
     <div className="histogram">
-      <div className="hist-bars">
+      <div
+        className={`hist-bars ${brush.enabled ? "brushable" : ""}`}
+        title={brush.enabled && !brush.dragging ? "Drag to zoom into a time range" : undefined}
+        {...brush.handlers}
+      >
         {buckets.map((b, i) => (
-          <div key={b.time} className="hist-bar" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(undefined)}>
+          <div key={b.time} className={`hist-bar ${hover === i && !sel ? "hover" : ""} ${inSel(i) ? "sel" : ""}`}>
             {series.map((s) => (
               <span key={s.key} style={{ height: `${(count(b, s) / max) * 100}%`, background: s.color }} />
             ))}
-            {hover === i && b.total > 0 && (
+            {hover === i && (b.total > 0 || sel) && (
               <div className="tooltip">
-                <div className="muted">{fmtAxis(b.time, span)}</div>
-                {series.map((s) =>
-                  count(b, s) > 0 ? (
-                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <i style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
-                      {count(b, s)} {s.label.toLowerCase()}
-                    </div>
-                  ) : null,
-                )}
+                <div className="muted">{rs && re ? `${tipTime(rs, span)} – ${tipTime(re, span)}` : fmtAxis(b.time, span)}</div>
+                {tipSeries.map(({ s, v }) => (
+                  <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <i style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
+                    {v} {s.label.toLowerCase()}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -255,5 +270,15 @@ export function Histogram({
         ))}
       </div>
     </div>
+  );
+}
+
+/** "Zoom out" button shown after drag-to-zoom on a chart. */
+export function ZoomOut({ onClick }: { onClick?: () => void }) {
+  if (!onClick) return null;
+  return (
+    <button className="btn" onClick={onClick} title="Back to the previous date range">
+      <ZoomOutIcon size={14} /> Zoom out
+    </button>
   );
 }

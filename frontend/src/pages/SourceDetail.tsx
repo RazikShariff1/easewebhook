@@ -8,7 +8,8 @@ import { useSourceTypes } from "../lib/sourceTypes";
 import { Badge, CopyText, Empty, ErrorBox, Loading, useAction } from "../components/ui";
 import { SourceForm } from "../components/forms";
 import { SourceIcon } from "../components/SourceIcon";
-import { RangePicker, rangeBounds } from "../components/Timeline";
+import { RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
+import { useZoomRange } from "../lib/brush";
 import { REQUEST_SERIES, StatusBarChart } from "../components/StatusBarChart";
 import { LineChart } from "../components/LineChart";
 
@@ -149,6 +150,7 @@ function Metrics({ src, compact }: { src: Source; compact?: boolean }) {
   const [range, setRange] = useState<RangeKey>(compact ? "1h" : "24h");
   const [bounds, setBounds] = useState(() => rangeBounds(range));
   useEffect(() => setBounds(rangeBounds(range)), [range]);
+  const zoom = useZoomRange(range, setRange);
 
   const hist = useQuery(
     () => api.get<{ buckets: HistogramBucket[]; bucket_seconds: number }>(`/sources/${src.id}/histogram`, { from: bounds.from, to: bounds.to, buckets: 60 }),
@@ -172,7 +174,8 @@ function Metrics({ src, compact }: { src: Source; compact?: boolean }) {
       <div className="dd-head">
         <h2>Metrics overview</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          <RangePicker value={range} onChange={setRange} />
+          <ZoomOut onClick={zoom.back} />
+          <RangePicker value={range} onChange={zoom.pick} />
           <button className="btn" onClick={() => setBounds(rangeBounds(range))}><RefreshCw size={14} /> Refresh</button>
         </div>
       </div>
@@ -187,7 +190,7 @@ function Metrics({ src, compact }: { src: Source; compact?: boolean }) {
           <Link to={`/requests?source_id=${src.id}`} className="dd-explore">Explore <ArrowUpRight size={15} /></Link>
         </div>
         {hist.data ? (
-          <StatusBarChart buckets={hist.data.buckets} from={bounds.from} to={bounds.to} series={REQUEST_SERIES} noun="requests" />
+          <StatusBarChart buckets={hist.data.buckets} from={bounds.from} to={bounds.to} series={REQUEST_SERIES} noun="requests" onSelect={zoom.zoom} />
         ) : (
           <Loading />
         )}
@@ -203,7 +206,7 @@ function Metrics({ src, compact }: { src: Source; compact?: boolean }) {
             <Link to={`/requests?source_id=${src.id}`} className="dd-explore faint">Explore <ArrowUpRight size={15} /></Link>
           </div>
           {hist.data ? (
-            <LineChart points={ratePoints} from={bounds.from} to={bounds.to} label="Requests / min" format={fmtNum} />
+            <LineChart points={ratePoints} from={bounds.from} to={bounds.to} label="Requests / min" format={fmtNum} onSelect={zoom.zoom} />
           ) : (
             <Loading />
           )}
@@ -218,7 +221,7 @@ function Metrics({ src, compact }: { src: Source; compact?: boolean }) {
             </div>
           </div>
           {hist.data ? (
-            <LineChart points={avgPoints} from={bounds.from} to={bounds.to} label="Events / request" format={fmtNum} />
+            <LineChart points={avgPoints} from={bounds.from} to={bounds.to} label="Events / request" format={fmtNum} onSelect={zoom.zoom} />
           ) : (
             <Loading />
           )}
