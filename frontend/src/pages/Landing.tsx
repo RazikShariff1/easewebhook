@@ -124,8 +124,9 @@ export function LandingPage() {
               <div className="lp-card">
                 <div className="lp-card-head mono">PUBLISH API</div>
                 <pre className="mono small">{`curl -X POST \
-  "https://api.easewebhook.com/e/`}<mark>{`order-events`}</mark>{`" \
-  -H "Authorization: Bearer ew_live…" \
+  https://easewebhook.onrender.com/e/`}<mark>{`order-events`}</mark>{` \
+  -H "Authorization: Bearer $EASEWEBHOOK_KEY" \
+  -H "Content-Type: application/json" \
   -d '{"type":"order.created"}'`}</pre>
                 <div className="lp-sent mono"><i /> 202 ACCEPTED · fanning out to 3 endpoints</div>
               </div>
