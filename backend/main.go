@@ -75,6 +75,13 @@ func main() {
 	(&handlers.API{Notify: notify, Log: app.Logger()}).Register(app)
 
 	app.OnStart(func(c *gofr.Context) error {
+		// Without a database every request and the delivery worker would fail; stop with a clear message
+		// instead of crash-looping on a nil connection.
+		if c.SQL == nil {
+			return errors.New("database is not configured: set DB_DIALECT=postgres, DB_HOST, DB_PORT, DB_USER, " +
+				"DB_PASSWORD, DB_NAME and DB_SSL_MODE (see backend/configs/.env.example or render.yaml)")
+		}
+
 		s := store.New(c.SQL)
 		st.Store(s)
 
