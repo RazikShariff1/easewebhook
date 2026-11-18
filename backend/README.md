@@ -48,7 +48,7 @@ Delivery worker: leases due events with `FOR UPDATE SKIP LOCKED`, so several ins
 - Every management route needs `Authorization: Bearer <token>` (HS256, 7 days, `JWT_SECRET`).
   Public: `/auth/*` above, `/e/*` (ingestion), `/.well-known/*`.
 - A Google sign-in with the same verified email as an existing password account links to it.
-- Single workspace for now: every signed-in user sees all sources/connections/events.
+- Data is scoped to workspaces (see below).
 
 ## Workspaces
 - Every source, destination, transformation, connection, request and event belongs to a workspace.
