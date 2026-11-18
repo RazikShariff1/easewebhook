@@ -2,7 +2,9 @@
 
 **A webhook gateway: receive, verify, filter, transform and reliably deliver webhooks, with full visibility into every request.**
 
-[Live app](https://easewebhook.vercel.app) · [API health](https://easewebhook.onrender.com/.well-known/health)
+**Website:** [easewebhook.vercel.app](https://easewebhook.vercel.app) · [API health](https://easewebhook.onrender.com/.well-known/health)
+
+EaseWebhook is open source: try it on the website, or run your own copy from this repo (see [Running locally](#running-locally) and [Deployment](#deployment)).
 
 EaseWebhook sits between the services that *send* webhooks (Stripe, GitHub, Shopify, Slack, …) and the servers that
 *receive* them. Senders post to a stable EaseWebhook URL; EaseWebhook checks the signature, stores the request, runs it
