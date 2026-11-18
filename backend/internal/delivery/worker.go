@@ -27,6 +27,7 @@ import (
 )
 
 const (
+	maxDBBackoff    = time.Minute
 	maxResponseBody = 64 << 10
 	maxBackoff      = 24 * time.Hour
 )
@@ -101,6 +102,11 @@ func (w *Worker) Run(ctx context.Context) {
 
 	w.log.Infof("delivery worker started (concurrency=%d)", w.cfg.Concurrency)
 
+	var (
+		failures int           // consecutive database errors
+		backoff  time.Duration // extra wait while the database is failing
+	)
+
 	for {
 		// drain as long as there's work and free slots
 		for {
@@ -115,10 +121,17 @@ func (w *Worker) Run(ctx context.Context) {
 			events, err := w.st.ClaimDueEvents(ctx, n, lease)
 			if err != nil {
 				if ctx.Err() == nil {
-					w.log.Errorf("claiming events: %v", err)
+					failures++
+					backoff = min(time.Duration(1<<min(failures-1, 6))*time.Second, maxDBBackoff)
+					w.log.Errorf("claiming events (retrying in %s): %v", backoff, err)
 				}
 
 				break
+			}
+
+			if failures > 0 {
+				w.log.Infof("database reachable again after %d failed attempt(s)", failures)
+				failures, backoff = 0, 0
 			}
 
 			for i := range events {
@@ -135,6 +148,19 @@ func (w *Worker) Run(ctx context.Context) {
 			if len(events) < n {
 				break
 			}
+		}
+
+		// While the database is failing (bad password, outage) wait longer between attempts, so we don't
+		// hammer it: Supabase's pooler blocks all logins after repeated authentication failures.
+		if backoff > 0 {
+			select {
+			case <-ctx.Done():
+				wg.Wait()
+				return
+			case <-time.After(backoff):
+			}
+
+			continue
 		}
 
 		select {
