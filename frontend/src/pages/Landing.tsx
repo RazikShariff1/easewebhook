@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
+import { COUNTRY_CENTRE, countryName } from "../lib/countries";
 import "./landing.css";
 
 const SENDERS = ["Shopify", "Stripe", "Twilio", "GitHub", "Slack", "Razorpay", "Zendesk"];
@@ -242,6 +243,7 @@ interface PublicStats {
   events_delivered: number;
   delivery_success_rate: number | null;
   source_types_in_use: string[];
+  origins: { country: string; requests: number }[];
   generated_at: string;
 }
 
@@ -270,18 +272,27 @@ const compact = (n: number) =>
 const ms = (v: number | null | undefined) => (v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(2)}s` : `${Math.round(v)}ms`);
 const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+/** Smallest 1/2/2.5/5 × 10^n value at or above v. */
+function niceCeil(v: number) {
+  const p = 10 ** Math.floor(Math.log10(v));
+  return ([1, 2, 2.5, 5, 10].find((m) => m * p >= v) ?? 10) * p;
+}
+
 const CW = 960; // chart viewBox width
 const CH = 190; // chart viewBox height
-const TOP = 34; // room for the legend
 
 /** End-to-end delivery latency over the last 24 h: avg and p99 per 30-min bucket, with hover readout. */
 function LatencyChart({ stats }: { stats?: PublicStats }) {
   const [hover, setHover] = useState<number>();
   const series = stats?.series ?? [];
   const n = series.length;
-  const peak = Math.max(1, ...series.map((b) => b.p99_ms ?? 0));
-  const x = (i: number) => (n > 1 ? 6 + (i / (n - 1)) * (CW - 12) : 0);
-  const y = (v: number) => CH - 8 - (v / peak) * (CH - TOP - 16);
+  // round the top of the scale up to a readable value, with headroom above the highest point
+  const peak = niceCeil(Math.max(1, ...series.map((b) => b.p99_ms ?? 0)) * 1.2);
+  const peakReq = Math.max(1, ...series.map((b) => b.requests));
+  const xPct = (i: number) => (n > 1 ? 1 + (i / (n - 1)) * 98 : 50); // % across, 1% inset each side
+  const yPct = (v: number) => 92 - (v / peak) * 76; // % down the plot, headroom for the legend
+  const x = (i: number) => (xPct(i) / 100) * CW;
+  const y = (v: number) => (yPct(v) / 100) * CH;
   const line = (key: "avg_ms" | "p99_ms") => {
     let d = "";
     let pen = false;
@@ -294,47 +305,77 @@ function LatencyChart({ stats }: { stats?: PublicStats }) {
     return d;
   };
   const p99 = line("p99_ms");
-  // shade only under spans that have data
+  const avg = line("avg_ms");
+  // shade only under spans with two or more points
   const area = p99
     .split("M")
     .filter(Boolean)
     .map((seg) => {
       const pts = seg.trim().split("L").map((p) => p.trim().split(" "));
-      const [x0] = pts[0];
-      const [x1] = pts[pts.length - 1];
-      return pts.length > 1 ? `M${seg.trim()} L${x1} ${CH - 8} L${x0} ${CH - 8} Z` : "";
+      return pts.length > 1 ? `M${seg.trim()} L${pts[pts.length - 1][0]} ${CH} L${pts[0][0]} ${CH} Z` : "";
     })
     .join(" ");
-  const avg = line("avg_ms");
-  const hasData = series.some((b) => b.p99_ms != null);
-  const lone = series.map((b, i) => ({ b, i })).filter(({ b, i }) => b.p99_ms != null && series[i - 1]?.p99_ms == null && series[i + 1]?.p99_ms == null);
+  const points = series.map((b, i) => ({ b, i })).filter(({ b }) => b.p99_ms != null);
+  const last = points[points.length - 1];
+  const hasData = points.length > 0;
   const hb = hover !== undefined ? series[hover] : undefined;
 
   return (
-    <div className="lp-chart">
-      <div className="lp-legend mono"><span className="d a" /> AVG <span className="d p" /> P99</div>
-      <svg
-        viewBox={`0 0 ${CW} ${CH}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={hasData ? `Delivery latency over the last 24 hours: average ${ms(stats?.avg_latency_ms)}, p99 ${ms(stats?.p99_latency_ms)}` : "No deliveries in the last 24 hours"}
-        onMouseMove={(e) => {
-          if (!n) return;
-          const r = e.currentTarget.getBoundingClientRect();
-          setHover(Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width) * (n - 1)))));
-        }}
-        onMouseLeave={() => setHover(undefined)}
-      >
-        <line x1="0" x2={CW} y1={CH - 8} y2={CH - 8} className="base" />
-        {area && <path d={area} className="area" />}
-        <path d={p99} className="p99" />
-        <path d={avg} className="avg" />
-        {lone.map(({ b, i }) => <circle key={b.time} cx={x(i)} cy={y(b.p99_ms!)} r="3" className="dot" />)}
-        {hover !== undefined && <line x1={x(hover)} x2={x(hover)} y1={TOP - 6} y2={CH - 8} className="cross" />}
-      </svg>
-      {!hasData && stats && <div className="lp-chart-empty mono">NO DELIVERIES IN THE LAST 24 H · THIS CHART IS LIVE</div>}
+    <div
+      className="lp-chart"
+      onMouseMove={(e) => {
+        if (!n) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        const f = (e.clientX - r.left) / r.width;
+        setHover(Math.max(0, Math.min(n - 1, Math.round(((f * 100 - 1) / 98) * (n - 1)))));
+      }}
+      onMouseLeave={() => setHover(undefined)}
+    >
+      <div className="lp-legend mono"><span className="d a" /> AVG <span className="d p" /> P99 <span className="lp-legend-sub">· END-TO-END DELIVERY</span></div>
+      <div className="lp-chart-plot">
+        <svg
+          viewBox={`0 0 ${CW} ${CH}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={hasData ? `Delivery latency over the last 24 hours: average ${ms(stats?.avg_latency_ms)}, p99 ${ms(stats?.p99_latency_ms)}` : "No deliveries in the last 24 hours"}
+        >
+          <line x1="0" x2={CW} y1={y(0)} y2={y(0)} className="base" />
+          {area && <path d={area} className="area" />}
+          <path d={p99} className="p99" />
+          <path d={avg} className="avg" />
+          {hover !== undefined && <line x1={x(hover)} x2={x(hover)} y1={CH * 0.12} y2={CH} className="cross" />}
+        </svg>
+        {/* dots in HTML so they stay round however the plot is stretched */}
+        {points.map(({ b, i }) => (
+          <span key={b.time}>
+            {b.avg_ms != null && <i className="lp-dot avg" style={{ left: `${xPct(i)}%`, top: `${yPct(b.avg_ms)}%` }} />}
+            <i className={`lp-dot p99 ${i === last?.i ? "last" : ""}`} style={{ left: `${xPct(i)}%`, top: `${yPct(b.p99_ms!)}%` }} />
+          </span>
+        ))}
+        {last && (
+          <span className="lp-dot-label mono" style={{ right: `${100 - xPct(last.i) + 1.5}%`, top: `${yPct(last.b.p99_ms!)}%` }}>
+            p99 {ms(last.b.p99_ms)}
+          </span>
+        )}
+        {hasData &&
+          [peak, peak / 2].map((v) => (
+            <span key={v} className="lp-grid mono" style={{ top: `${yPct(v)}%` }}>{ms(v)}</span>
+          ))}
+        {!hasData && stats && <div className="lp-chart-empty mono">NO DELIVERIES IN THE LAST 24 H · THIS CHART IS LIVE</div>}
+      </div>
+      {/* request volume, its own scale */}
+      <div className="lp-chart-vol" aria-label={`Requests per ${stats?.bucket_minutes ?? 30} minutes, peak ${peakReq}`}>
+        <span className="lp-vol-label mono">REQUESTS</span>
+        {series.map((b, i) => (
+          <i
+            key={b.time}
+            className={`${b.requests ? "on" : ""} ${i === hover ? "hover" : ""}`}
+            style={{ left: `${xPct(i)}%`, height: b.requests ? `${Math.max(14, (b.requests / peakReq) * 100)}%` : undefined }}
+          />
+        ))}
+      </div>
       {hb && hover !== undefined && (
-        <div className="lp-chart-tip mono" style={{ left: `clamp(8px, calc(${(hover / Math.max(1, n - 1)) * 100}% - 80px), calc(100% - 168px))` }}>
+        <div className="lp-chart-tip mono" style={{ left: `clamp(8px, calc(${xPct(hover)}% - 80px), calc(100% - 168px))` }}>
           <div className="t">{clock(hb.time)}</div>
           <div><span>Requests</span><b>{hb.requests}</b></div>
           <div><span>Avg</span><b>{ms(hb.avg_ms)}</b></div>
@@ -416,14 +457,29 @@ function useRotation(degPerSec: number) {
   return rot;
 }
 
-function Globe({ live }: { live: string[] }) {
-  const rot = useRotation(6);
+/** Squeeze latitude into the band the dome shows (the southern hemisphere is below the fold). */
+const displayLat = (lat: number) => 8 + ((Math.max(-50, Math.min(70, lat)) + 50) / 120) * 62;
+
+function Globe({ live, origins }: { live: string[]; origins: { country: string; requests: number }[] }) {
+  const spin = useRotation(4);
+  // open facing the busiest origin (it starts just left of centre and turns into view)
+  const top = origins.find((o) => COUNTRY_CENTRE[o.country]);
+  const offset = top ? 25 - COUNTRY_CENTRE[top.country][1] : 0;
+  const rot = (((spin + offset) % 360) + 360) % 360;
   const meridians = range(0, 330, 30).map((lon) => arc(range(-90, 90, 5).map((lat) => [lon, lat]), rot));
   const parallels = range(-60, 75, 15).map((lat) => arc(range(0, 360, 5).map((lon) => [lon, lat]), rot));
   const rim = `M${G.cx - G.r} ${G.cy} A${G.r} ${G.r} 0 0 1 ${G.cx + G.r} ${G.cy}`;
   const nodes = GLOBE_NODES.map((n) => ({ ...n, ...project(n.lon, n.lat, rot), live: live.includes(n.id) }))
     .filter((n) => n.z > 0.05)
     .sort((a, b) => a.z - b.z); // nearer nodes paint on top
+  const peakOrigin = Math.max(1, ...origins.map((o) => o.requests));
+  const originPts = origins
+    .filter((o) => COUNTRY_CENTRE[o.country])
+    .map((o) => {
+      const [lat, lon] = COUNTRY_CENTRE[o.country];
+      return { ...o, ...project(lon, displayLat(lat), rot), r: 3.5 + 4.5 * Math.sqrt(o.requests / peakOrigin) };
+    })
+    .filter((o) => o.z > 0.05);
 
   return (
     <div className="lp-globe" aria-label={`Supported providers${live.length ? `; live traffic from ${live.join(", ").toLowerCase()}` : ""}`}>
@@ -446,6 +502,14 @@ function Globe({ live }: { live: string[] }) {
             {meridians.map((d, i) => <path key={`m${i}`} d={d} />)}
           </g>
           <path d={rim} className="rim" />
+          {originPts.map((o) => (
+            <g key={o.country} className="go" transform={`translate(${o.x.toFixed(1)} ${o.y.toFixed(1)})`} opacity={Math.min(1, o.z * 2.2).toFixed(2)}>
+              <title>{`${countryName(o.country)}: ${o.requests.toLocaleString()} webhook${o.requests === 1 ? "" : "s"} in the last 30 days`}</title>
+              <circle r={o.r * 2.2} className="halo" />
+              <circle r={o.r} className="core" />
+              {o.z > 0.3 && <text x={o.r + 5} y="3.5" className="olbl">{`${o.country} · ${compact(o.requests)}`}</text>}
+            </g>
+          ))}
           {nodes.map((n) => (
             <g key={n.id} className={`gn ${n.live ? "live" : ""}`} transform={`translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})`} opacity={Math.min(1, n.z * 2.2).toFixed(2)}>
               {n.live && <circle r="9" className="halo" />}
@@ -459,7 +523,8 @@ function Globe({ live }: { live: string[] }) {
         </g>
       </svg>
       <div className="lp-globe-key mono">
-        <span><i className="live" /> LIVE TRAFFIC (30 DAYS)</span>
+        <span><i className="origin" /> WEBHOOK ORIGINS{origins.length ? ` · ${origins.length} ${origins.length === 1 ? "COUNTRY" : "COUNTRIES"}` : ""}</span>
+        <span><i className="live" /> PROVIDER WITH TRAFFIC</span>
         <span><i /> SUPPORTED</span>
       </div>
     </div>
@@ -499,7 +564,7 @@ function ProductionSection() {
             <div title="Events delivered successfully out of all finished events (excludes ones still retrying)">
               <strong className="mono">{v((s) => (s.delivery_success_rate == null ? "—" : `${s.delivery_success_rate.toFixed(1)}%`))}</strong>
               <span className="mono"><i /> DELIVERY SUCCESS</span>
-              <small className="mono">{v((s) => `${compact(s.events_delivered)} events delivered`)}</small>
+              <small className="mono">{v((s) => `${compact(s.events_delivered)} ${s.events_delivered === 1 ? "event" : "events"} delivered`)}</small>
             </div>
           </div>
         </div>
@@ -554,7 +619,7 @@ function ProductionSection() {
         <div className="lp-pc works">
           <h3>Works everywhere you do</h3>
           <p>Native signature verification for 30 providers, plus generic HMAC, API key and basic auth for the rest.</p>
-          <Globe live={st?.source_types_in_use ?? []} />
+          <Globe live={st?.source_types_in_use ?? []} origins={st?.origins ?? []} />
           <div className="lp-stats two">
             <div>
               <strong className="mono">{v((s) => compact(s.requests_total))}</strong>

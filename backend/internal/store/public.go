@@ -26,7 +26,14 @@ type PublicStats struct {
 	EventsDelivered  int      `json:"events_delivered"`
 	DeliverySuccess  *float64 `json:"delivery_success_rate"` // successful / (successful + failed), all time
 	SourceTypesInUse []string `json:"source_types_in_use"`   // types that received traffic in the last 30 days, busiest first
-	GeneratedAt      string   `json:"generated_at"`
+	// where webhooks come from: sender country (from the edge's CF-IPCountry header), last 30 days
+	Origins     []PublicOrigin `json:"origins"`
+	GeneratedAt string         `json:"generated_at"`
+}
+
+type PublicOrigin struct {
+	Country  string `json:"country"` // ISO 3166-1 alpha-2
+	Requests int    `json:"requests"`
 }
 
 type PublicBucket struct {
@@ -82,6 +89,7 @@ func (s *Store) computePublicStats(ctx context.Context) (*PublicStats, error) {
 		BucketMinutes:    int(publicBucket.Minutes()),
 		Series:           make([]PublicBucket, n),
 		SourceTypesInUse: []string{},
+		Origins:          []PublicOrigin{},
 		GeneratedAt:      now.Format(time.RFC3339),
 	}
 
@@ -91,11 +99,43 @@ func (s *Store) computePublicStats(ctx context.Context) (*PublicStats, error) {
 
 	var (
 		wg   sync.WaitGroup
-		errs [4]error
+		errs [5]error
 		mu   sync.Mutex // guards out.Series, written by two queries
 	)
 
-	wg.Add(4)
+	wg.Add(5)
+
+	// sender countries (aggregate counts only; IPs never leave the database)
+	go func() {
+		defer wg.Done()
+
+		rows, err := s.db.QueryContext(ctx, `SELECT upper(headers->>'cf-ipcountry'), count(*) FROM requests
+			WHERE ingested_at > now() - interval '30 days' AND headers->>'cf-ipcountry' ~* '^[a-z]{2}$'
+			  AND upper(headers->>'cf-ipcountry') NOT IN ('XX', 'T1')
+			GROUP BY 1 ORDER BY 2 DESC LIMIT 40`)
+		if err != nil {
+			errs[4] = err
+			return
+		}
+		defer rows.Close()
+
+		var list []PublicOrigin
+
+		for rows.Next() {
+			var o PublicOrigin
+			if errs[4] = rows.Scan(&o.Country, &o.Requests); errs[4] != nil {
+				return
+			}
+
+			list = append(list, o)
+		}
+
+		mu.Lock()
+		out.Origins = append(out.Origins, list...)
+		mu.Unlock()
+
+		errs[4] = rows.Err()
+	}()
 
 	// requests per bucket
 	go func() {
