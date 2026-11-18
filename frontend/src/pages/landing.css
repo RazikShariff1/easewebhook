@@ -362,16 +362,3 @@ body:has(.lp) { background: #fafaf9; }
 .lp-browser .lp-log td { padding: 9px 12px; }
 .lp-dlist .tile { background: #fff; border: 1px solid var(--l-line); box-shadow: 0 1px 2px rgba(0,0,0,.06); width: 22px; height: 22px; }
 .lp-dlist .tile img { display: block; }
-
-/* Open source */
-.lp-oss { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; border: 1px solid var(--l-line); background: var(--l-surface); padding: 48px; margin-bottom: 80px; }
-.lp-oss h2 { font-size: 32px; letter-spacing: -.02em; font-weight: 500; margin: 6px 0 14px; }
-.lp-oss p { color: var(--l-muted); font-size: 17px; margin: 0; max-width: 480px; }
-.lp-btn .inv { filter: invert(1); }
-.lp-oss-term { border: 1px solid var(--l-line); border-radius: 10px; background: #fcfcfb; box-shadow: 0 6px 18px rgba(0,0,0,.05); overflow: hidden; min-width: 0; }
-.lp-term-bar { display: flex; gap: 6px; padding: 11px 14px; border-bottom: 1px solid var(--l-line); background: #fff; }
-.lp-term-bar i { width: 9px; height: 9px; border-radius: 50%; background: #e4e4e0; }
-.lp-oss-term pre { margin: 0; padding: 16px 16px 8px; font-size: 12.5px; color: #333; overflow: hidden; text-overflow: ellipsis; }
-.lp-oss-term ul { list-style: none; margin: 0; padding: 8px 16px 16px; display: grid; gap: 6px; font-size: 12px; color: var(--l-muted); }
-.lp-oss-term li::before { content: "✓ "; color: #1a7a44; }
-@media (max-width: 860px) { .lp-oss { grid-template-columns: 1fr; padding: 28px 20px; } }
