@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
+import { ArrowRight, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
 import { COUNTRY_CENTRE, countryName } from "../lib/countries";
@@ -109,19 +109,67 @@ export function LandingPage() {
       <section id="delivery" className="lp-wrap lp-reliab">
         <h2>Built so nothing gets dropped</h2>
         <p className="lp-sub small">Every request is stored the moment it arrives, so a slow or broken destination never means lost data.</p>
-        <div className="lp-grid">
-          {[
-            ["Verified ingestion", "HMAC, API key or basic auth verification on every source URL."],
-            ["Automatic retries", "Linear or exponential backoff, with manual and bulk retry when you need it."],
-            ["Full audit trail", "Every request, event and delivery attempt, searchable by status or payload."],
-            ["JavaScript transforms", "Reshape payloads in flight with a small handler, tested before you ship."],
-          ].map(([t, d]) => (
-            <div className="lp-tile" key={t}>
-              <Check size={16} />
-              <h3>{t}</h3>
-              <p>{d}</p>
+
+        <div className="lp-rframe">
+          <ol className="lp-life mono" aria-label="What happens to every webhook">
+            {[
+              ["01", "RECEIVED", "public source URL"],
+              ["02", "VERIFIED", "signature checked"],
+              ["03", "STORED", "before we reply"],
+              ["04", "ROUTED", "filter · transform"],
+              ["05", "DELIVERED", "retried until 2xx"],
+            ].map(([n, t, d]) => (
+              <li key={n}>
+                <span className="n">{n}</span>
+                <b>{t}</b>
+                <small>{d}</small>
+              </li>
+            ))}
+          </ol>
+
+          <div className="lp-rcells">
+            <div className="lp-rcell">
+              <h3><span><ShieldCheck /></span>Verified ingestion</h3>
+              <p>HMAC, Ed25519, API key or basic auth on every source URL. Forged or replayed requests never reach your app.</p>
+              <div className="lp-rdemo mono">
+                <div className="row bad"><i>401</i> bad signature</div>
+                <div className="row"><i>→</i> <em>REJECTED</em> · reason kept</div>
+              </div>
             </div>
-          ))}
+
+            <div className="lp-rcell">
+              <h3><span><RotateCcw /></span>Automatic retries</h3>
+              <p>Linear or exponential backoff per connection, plus manual and bulk retry when a destination comes back.</p>
+              <div className="lp-rdemo mono">
+                <div className="lp-retry" aria-label="Attempt 1 failed, attempt 2 failed, attempt 3 succeeded">
+                  <span className="a bad">1<small>503</small></span>
+                  <span className="gap">+1m</span>
+                  <span className="a bad">2<small>504</small></span>
+                  <span className="gap">+2m</span>
+                  <span className="a ok">3<small>200</small></span>
+                </div>
+              </div>
+            </div>
+
+            <div className="lp-rcell">
+              <h3><span><ScanSearch /></span>Full audit trail</h3>
+              <p>Every request, event and delivery attempt is kept and searchable by status, response or payload.</p>
+              <div className="lp-rdemo mono">
+                <div className="row"><i>req</i> POST /e/shop · <em>ACCEPTED</em></div>
+                <div className="row"><i>evt</i> shop → api · <em className="ok">SUCCESSFUL</em></div>
+                <div className="row"><i>atm</i> 200 OK · 63 ms</div>
+              </div>
+            </div>
+
+            <div className="lp-rcell">
+              <h3><span><Code2 /></span>JavaScript transforms</h3>
+              <p>Reshape payloads in flight with a small handler, and test it against a real request before you ship.</p>
+              <pre className="lp-rdemo mono">{`addHandler("transform", r => {
+  r.body.total /= 100;
+  return r;
+});`}</pre>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -359,7 +407,7 @@ function LatencyChart({ stats }: { stats?: PublicStats }) {
         )}
         {hasData &&
           [peak, peak / 2].map((v) => (
-            <span key={v} className="lp-grid mono" style={{ top: `${yPct(v)}%` }}>{ms(v)}</span>
+            <span key={v} className="lp-gridline mono" style={{ top: `${yPct(v)}%` }}>{ms(v)}</span>
           ))}
         {!hasData && stats && <div className="lp-chart-empty mono">NO DELIVERIES IN THE LAST 24 H · THIS CHART IS LIVE</div>}
       </div>
