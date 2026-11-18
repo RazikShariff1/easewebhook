@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/dop251/goja v0.0.0-20261117132507-c18a77e471d9
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/lib/pq v1.12.3
 	gofr.dev v1.63.1
 	golang.org/x/crypto v0.59.0
 )
@@ -46,7 +47,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.20.1 // indirect
-	github.com/lib/pq v1.12.3 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect

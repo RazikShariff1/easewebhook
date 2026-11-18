@@ -66,9 +66,13 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 				return
 			}
 
-			if _, err := s.MemberRole(r.Context(), ws, uid); err != nil {
-				writeErr(w, http.StatusForbidden, "you are not a member of this workspace")
-				return
+			if !memberCached(ws, uid) {
+				if _, err := s.MemberRole(r.Context(), ws, uid); err != nil {
+					writeErr(w, http.StatusForbidden, "you are not a member of this workspace")
+					return
+				}
+
+				rememberMember(ws, uid)
 			}
 
 			ctx = context.WithValue(ctx, wsCtxKey{}, ws)

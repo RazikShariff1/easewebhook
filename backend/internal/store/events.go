@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/zopping/easewebhook/backend/internal/models"
@@ -659,26 +660,39 @@ type Stats struct {
 
 func (s *Store) Stats(ctx context.Context) (*Stats, error) {
 	st := &Stats{Requests24h: map[string]int{}, Attempts24h: map[string]int{}}
-
-	if err := s.groupCount(ctx, `SELECT source_id, count(*) FROM requests WHERE ingested_at > now() - interval '24 hours'
-		AND ($1::text = '' OR workspace_id = $1) GROUP BY source_id`, st.Requests24h, s.ws); err != nil {
-		return nil, err
-	}
-
-	if err := s.groupCount(ctx, `SELECT e.destination_id, count(*) FROM attempts a JOIN events e ON e.id=a.event_id
-		WHERE a.created_at > now() - interval '24 hours' AND ($1::text = '' OR e.workspace_id = $1)
-		GROUP BY e.destination_id`, st.Attempts24h, s.ws); err != nil {
-		return nil, err
-	}
-
 	from := time.Now().Add(-24 * time.Hour)
 
-	byStatus, err := s.CountEventsByStatus(ctx, EventFilter{From: &from})
-	if err != nil {
+	// three independent queries: run them concurrently so the call costs one round trip, not three
+	var (
+		wg   sync.WaitGroup
+		errs [3]error
+	)
+
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		errs[0] = s.groupCount(ctx, `SELECT source_id, count(*) FROM requests WHERE ingested_at > now() - interval '24 hours'
+			AND ($1::text = '' OR workspace_id = $1) GROUP BY source_id`, st.Requests24h, s.ws)
+	}()
+
+	go func() {
+		defer wg.Done()
+		errs[1] = s.groupCount(ctx, `SELECT e.destination_id, count(*) FROM attempts a JOIN events e ON e.id=a.event_id
+			WHERE a.created_at > now() - interval '24 hours' AND ($1::text = '' OR e.workspace_id = $1)
+			GROUP BY e.destination_id`, st.Attempts24h, s.ws)
+	}()
+
+	go func() {
+		defer wg.Done()
+		st.EventsByStatus, errs[2] = s.CountEventsByStatus(ctx, EventFilter{From: &from})
+	}()
+
+	wg.Wait()
+
+	if err := errors.Join(errs[:]...); err != nil {
 		return nil, err
 	}
-
-	st.EventsByStatus = byStatus
 
 	return st, nil
 }

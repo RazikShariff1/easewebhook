@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -82,7 +83,22 @@ func main() {
 				"DB_PASSWORD, DB_NAME and DB_SSL_MODE (see backend/configs/.env.example or render.yaml)")
 		}
 
-		s := store.New(c.SQL)
+		// The store gets its own pool tuned for a remote database (one round trip per query, warm idle
+		// connections); GoFr's connection keeps running migrations and the health check.
+		pool, err := store.OpenPool(context.Background(), store.PoolConfig{
+			Host:     app.Config.Get("DB_HOST"),
+			Port:     app.Config.GetOrDefault("DB_PORT", "5432"),
+			User:     app.Config.Get("DB_USER"),
+			Password: app.Config.Get("DB_PASSWORD"),
+			Name:     app.Config.Get("DB_NAME"),
+			SSLMode:  app.Config.GetOrDefault("DB_SSL_MODE", "require"),
+			MaxOpen:  intConf(app, "DB_MAX_OPEN_CONNECTION", 10),
+		})
+		if err != nil {
+			return fmt.Errorf("opening database pool: %w", err)
+		}
+
+		s := store.New(pool)
 		st.Store(s)
 
 		w := delivery.NewWorker(s, app.Logger(), delivery.Config{

@@ -100,6 +100,8 @@ func (a *API) deleteWorkspace(c *gofr.Context) (any, error) {
 		return nil, err
 	}
 
+	defer auth.ForgetWorkspace(wsID)
+
 	return nil, raw(c).DeleteWorkspace(c, wsID)
 }
 
@@ -153,6 +155,7 @@ func (a *API) updateMember(c *gofr.Context) (any, error) {
 	}
 
 	uid := c.PathParam("user_id")
+	defer auth.ForgetWorkspace(wsID)
 
 	return nil, mapErr(raw(c).UpdateMemberRole(c, wsID, uid, in.Role), "member", uid)
 }
@@ -168,6 +171,8 @@ func (a *API) removeMember(c *gofr.Context) (any, error) {
 	if uid != auth.UserID(c) && role != store.RoleOwner {
 		return nil, errOwnerOnly
 	}
+
+	defer auth.ForgetWorkspace(wsID)
 
 	deleted, err := raw(c).RemoveMember(c, wsID, uid)
 	if err != nil {
