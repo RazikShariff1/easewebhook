@@ -6,6 +6,7 @@ import { useAuth } from "../lib/auth";
 import { COUNTRY_CENTRE, countryName } from "../lib/countries";
 import "./landing.css";
 
+const REPO = "https://github.com/RazikShariff1/easewebhook";
 const SENDERS = ["Shopify", "Stripe", "Twilio", "GitHub", "Slack", "Razorpay", "Zendesk"];
 
 export function LandingPage() {
@@ -22,6 +23,7 @@ export function LandingPage() {
             <a href="#how">How it works</a>
             <a href="#features">Features</a>
             <a href="#delivery">Reliability</a>
+            <a href="#open-source">Open source</a>
           </nav>
           <div className="lp-nav-cta">
             {!user && <Link to="/login" className="lp-btn">Sign in</Link>}
@@ -234,6 +236,31 @@ export function LandingPage() {
                 </div>
               </div>
             </Cell>
+          </div>
+        </div>
+      </section>
+
+      <section id="open-source" className="lp-wrap">
+        <div className="lp-oss">
+          <div className="lp-oss-copy">
+            <div className="lp-eyebrow blue">OPEN SOURCE</div>
+            <h2>Open source. Use ours or run your own.</h2>
+            <p>The whole platform is on GitHub: ingestion, the Postgres-backed delivery worker and this dashboard. Read the code, fork it, or self-host it with Docker, with no message broker to operate.</p>
+            <div className="lp-actions left">
+              <a href={REPO} target="_blank" rel="noreferrer" className="lp-btn primary"><img src="/brands/github.svg" alt="" width="16" height="16" className="inv" />View on GitHub</a>
+              <a href={`${REPO}#readme`} target="_blank" rel="noreferrer" className="lp-btn">Self-hosting guide</a>
+            </div>
+          </div>
+          <div className="lp-oss-term mono" aria-label="Clone the repository">
+            <div className="lp-term-bar"><i /><i /><i /></div>
+            <pre>{`$ git clone ${REPO.replace("https://", "")}
+$ cd easewebhook`}</pre>
+            <ul>
+              <li>Go API + delivery worker</li>
+              <li>PostgreSQL job queue</li>
+              <li>React dashboard</li>
+              <li>Dockerfile included</li>
+            </ul>
           </div>
         </div>
       </section>
