@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
 import { Logo } from "../components/Logo";
@@ -405,26 +405,29 @@ const GLOBE_NODES: { n: string; id: string; lon: number; lat: number }[] = [
 
 const GW = 440; // globe viewBox
 const GH = 250;
-const G = { cx: 220, cy: 236, r: 196, tilt: (24 * Math.PI) / 180 };
+const G = { cx: 220, cy: 236, r: 196 };
+const TILT_MIN = 6;
+const TILT_MAX = 50;
 
-/** Orthographic projection of (lon, lat) on a sphere rotated by `rot` degrees and tilted toward the viewer. */
-function project(lon: number, lat: number, rot: number) {
+/** Orthographic projection of (lon, lat) on a sphere spun by `rot` and tilted `tilt` degrees toward the viewer. */
+function project(lon: number, lat: number, rot: number, tilt: number) {
   const l = ((lon + rot) * Math.PI) / 180;
   const p = (lat * Math.PI) / 180;
+  const t = (tilt * Math.PI) / 180;
   const x0 = Math.cos(p) * Math.sin(l);
   const y0 = Math.sin(p);
   const z0 = Math.cos(p) * Math.cos(l);
-  const y = y0 * Math.cos(G.tilt) - z0 * Math.sin(G.tilt);
-  const z = y0 * Math.sin(G.tilt) + z0 * Math.cos(G.tilt);
+  const y = y0 * Math.cos(t) - z0 * Math.sin(t);
+  const z = y0 * Math.sin(t) + z0 * Math.cos(t);
   return { x: G.cx + G.r * x0, y: G.cy - G.r * y, z };
 }
 
 /** Polyline through projected points, broken wherever the curve passes behind the sphere. */
-function arc(points: [number, number][], rot: number) {
+function arc(points: [number, number][], rot: number, tilt: number) {
   let d = "";
   let pen = false;
   for (const [lon, lat] of points) {
-    const q = project(lon, lat, rot);
+    const q = project(lon, lat, rot, tilt);
     if (q.z <= 0) {
       pen = false;
       continue;
@@ -437,39 +440,113 @@ function arc(points: [number, number][], rot: number) {
 
 const range = (a: number, b: number, step: number) => Array.from({ length: Math.floor((b - a) / step) + 1 }, (_, i) => a + i * step);
 
-function useRotation(degPerSec: number) {
-  const [rot, setRot] = useState(0);
+/**
+ * Globe orientation: slow auto-spin (paused while hovered, off for reduced motion), drag to spin/tilt with
+ * momentum on release, arrow keys to nudge.
+ */
+function useGlobeControls(autoDegPerSec: number) {
+  const [view, setView] = useState({ rot: 0, tilt: 24 });
+  const s = useRef({ drag: false, hover: false, vel: 0, x: 0, y: 0, t: 0, moved: 0, captured: false });
+  const reduce = typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
   useEffect(() => {
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     let raf = 0;
     let last = performance.now();
-    const tick = (t: number) => {
-      // ~30fps is plenty for a slow spin
-      if (t - last > 33) {
-        setRot((r) => (r - ((t - last) / 1000) * degPerSec + 360) % 360);
-        last = t;
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const st = s.current;
+      if (!st.drag) {
+        let d = 0;
+        if (Math.abs(st.vel) > 0.5) {
+          d = st.vel * dt; // momentum after a fling
+          st.vel *= Math.pow(0.04, dt); // decays to ~4% per second
+        } else if (!st.hover && !reduce) {
+          st.vel = 0;
+          d = -autoDegPerSec * dt;
+        }
+        if (d) setView((v) => ({ ...v, rot: (((v.rot + d) % 360) + 360) % 360 }));
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [degPerSec]);
-  return rot;
+  }, [autoDegPerSec, reduce]);
+
+  const DEG_PER_PX = 0.45;
+  const handlers = {
+    onPointerDown: (e: React.PointerEvent<SVGSVGElement>) => {
+      const st = s.current;
+      Object.assign(st, { drag: true, vel: 0, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, captured: false });
+    },
+    onPointerMove: (e: React.PointerEvent<SVGSVGElement>) => {
+      const st = s.current;
+      if (!st.drag) return;
+      const now = performance.now();
+      const dx = e.clientX - st.x;
+      const dy = e.clientY - st.y;
+      st.moved += Math.abs(dx) + Math.abs(dy);
+      // capture only once it's really a drag, so a plain tap still reaches the marker under it
+      if (!st.captured && st.moved > 4) {
+        st.captured = true;
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId);
+        } catch {
+          /* pointer already gone */
+        }
+      }
+      const dRot = dx * DEG_PER_PX;
+      st.vel = 0.8 * st.vel + 0.2 * (dRot / Math.max(0.008, (now - st.t) / 1000)); // smoothed fling speed
+      Object.assign(st, { x: e.clientX, y: e.clientY, t: now });
+      setView((v) => ({
+        rot: (((v.rot + dRot) % 360) + 360) % 360,
+        tilt: Math.max(TILT_MIN, Math.min(TILT_MAX, v.tilt + dy * 0.25)),
+      }));
+    },
+    onPointerUp: () => {
+      const st = s.current;
+      st.drag = false;
+      if (performance.now() - st.t > 80) st.vel = 0; // held still before letting go: no fling
+      st.vel = Math.max(-240, Math.min(240, st.vel));
+    },
+    onPointerCancel: () => {
+      s.current.drag = false;
+      s.current.vel = 0;
+    },
+    onPointerEnter: () => (s.current.hover = true),
+    onPointerLeave: () => (s.current.hover = false),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      const k = { ArrowLeft: [-12, 0], ArrowRight: [12, 0], ArrowUp: [0, -4], ArrowDown: [0, 4] }[e.key];
+      if (!k) return;
+      e.preventDefault();
+      s.current.vel = 0;
+      setView((v) => ({
+        rot: (((v.rot + k[0]) % 360) + 360) % 360,
+        tilt: Math.max(TILT_MIN, Math.min(TILT_MAX, v.tilt + k[1])),
+      }));
+    },
+  };
+  return { view, handlers, wasDrag: () => s.current.moved > 6 };
 }
 
 /** Squeeze latitude into the band the dome shows (the southern hemisphere is below the fold). */
 const displayLat = (lat: number) => 8 + ((Math.max(-50, Math.min(70, lat)) + 50) / 120) * 62;
 
+type GlobeTip = { x: number; y: number; title: string; sub: string; tone: "origin" | "live" | "plain" };
+
 function Globe({ live, origins }: { live: string[]; origins: { country: string; requests: number }[] }) {
-  const spin = useRotation(4);
+  const { view, handlers, wasDrag } = useGlobeControls(4);
+  const [tip, setTip] = useState<GlobeTip>();
+  const [pinned, setPinned] = useState<string>();
   // open facing the busiest origin (it starts just left of centre and turns into view)
   const top = origins.find((o) => COUNTRY_CENTRE[o.country]);
   const offset = top ? 25 - COUNTRY_CENTRE[top.country][1] : 0;
-  const rot = (((spin + offset) % 360) + 360) % 360;
-  const meridians = range(0, 330, 30).map((lon) => arc(range(-90, 90, 5).map((lat) => [lon, lat]), rot));
-  const parallels = range(-60, 75, 15).map((lat) => arc(range(0, 360, 5).map((lon) => [lon, lat]), rot));
+  const rot = (((view.rot + offset) % 360) + 360) % 360;
+  const tilt = view.tilt;
+  const meridians = range(0, 330, 30).map((lon) => arc(range(-90, 90, 5).map((lat) => [lon, lat]), rot, tilt));
+  const parallels = range(-60, 75, 15).map((lat) => arc(range(0, 360, 5).map((lon) => [lon, lat]), rot, tilt));
   const rim = `M${G.cx - G.r} ${G.cy} A${G.r} ${G.r} 0 0 1 ${G.cx + G.r} ${G.cy}`;
-  const nodes = GLOBE_NODES.map((n) => ({ ...n, ...project(n.lon, n.lat, rot), live: live.includes(n.id) }))
+  const nodes = GLOBE_NODES.map((n) => ({ ...n, ...project(n.lon, n.lat, rot, tilt), live: live.includes(n.id) }))
     .filter((n) => n.z > 0.05)
     .sort((a, b) => a.z - b.z); // nearer nodes paint on top
   const peakOrigin = Math.max(1, ...origins.map((o) => o.requests));
@@ -477,13 +554,50 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
     .filter((o) => COUNTRY_CENTRE[o.country])
     .map((o) => {
       const [lat, lon] = COUNTRY_CENTRE[o.country];
-      return { ...o, ...project(lon, displayLat(lat), rot), r: 3.5 + 4.5 * Math.sqrt(o.requests / peakOrigin) };
+      return { ...o, ...project(lon, displayLat(lat), rot, tilt), r: 3.5 + 4.5 * Math.sqrt(o.requests / peakOrigin) };
     })
     .filter((o) => o.z > 0.05);
 
+  const originTip = (o: (typeof originPts)[number]): GlobeTip => ({
+    x: o.x,
+    y: o.y,
+    tone: "origin",
+    title: countryName(o.country),
+    sub: `${o.requests.toLocaleString()} webhook${o.requests === 1 ? "" : "s"} received · last 30 days`,
+  });
+  const nodeTip = (n: (typeof nodes)[number]): GlobeTip => ({
+    x: n.x,
+    y: n.y - 14,
+    tone: n.live ? "live" : "plain",
+    title: n.n,
+    sub: n.live ? "Signature-verified source · traffic in the last 30 days" : "Signature verification supported",
+  });
+  // a tapped (pinned) item keeps its tooltip and follows the globe as it turns
+  const pinnedTip = (() => {
+    if (!pinned) return undefined;
+    const o = originPts.find((p) => `o:${p.country}` === pinned);
+    if (o) return originTip(o);
+    const n = nodes.find((p) => `n:${p.id}` === pinned);
+    return n ? nodeTip(n) : undefined;
+  })();
+  const shown = tip ?? pinnedTip;
+  const pick = (key: string) => () => !wasDrag() && setPinned((p) => (p === key ? undefined : key));
+
   return (
-    <div className="lp-globe" aria-label={`Supported providers${live.length ? `; live traffic from ${live.join(", ").toLowerCase()}` : ""}`}>
-      <svg viewBox={`0 0 ${GW} ${GH}`} aria-hidden="true">
+    <div className="lp-globe">
+      <svg
+        viewBox={`0 0 ${GW} ${GH}`}
+        className="lp-globe-svg"
+        tabIndex={0}
+        role="img"
+        aria-label={`Interactive globe: drag or use arrow keys to turn it. ${
+          origins.length
+            ? `Webhooks in the last 30 days came from ${origins.map((o) => `${countryName(o.country)} (${o.requests})`).join(", ")}.`
+            : "No webhook traffic in the last 30 days yet."
+        }`}
+        {...handlers}
+        onClick={(e) => e.target === e.currentTarget && setPinned(undefined)}
+      >
         <defs>
           <radialGradient id="lp-gfill" cx="50%" cy="20%" r="80%">
             <stop offset="0%" stopColor="#ffffff" />
@@ -496,36 +610,66 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
           <mask id="lp-gmask"><rect width={GW} height={GH} fill="url(#lp-gfade)" /></mask>
         </defs>
         <g mask="url(#lp-gmask)">
-          <circle cx={G.cx} cy={G.cy} r={G.r} fill="url(#lp-gfill)" />
+          <circle cx={G.cx} cy={G.cy} r={G.r} fill="url(#lp-gfill)" onClick={() => !wasDrag() && setPinned(undefined)} />
           <g className="gl">
             {parallels.map((d, i) => <path key={`p${i}`} d={d} />)}
             {meridians.map((d, i) => <path key={`m${i}`} d={d} />)}
           </g>
           <path d={rim} className="rim" />
           {originPts.map((o) => (
-            <g key={o.country} className="go" transform={`translate(${o.x.toFixed(1)} ${o.y.toFixed(1)})`} opacity={Math.min(1, o.z * 2.2).toFixed(2)}>
-              <title>{`${countryName(o.country)}: ${o.requests.toLocaleString()} webhook${o.requests === 1 ? "" : "s"} in the last 30 days`}</title>
+            <g
+              key={o.country}
+              className={`go ${pinned === `o:${o.country}` ? "on" : ""}`}
+              transform={`translate(${o.x.toFixed(1)} ${o.y.toFixed(1)})`}
+              opacity={Math.min(1, o.z * 2.2).toFixed(2)}
+              onPointerEnter={() => setTip(originTip(o))}
+              onPointerLeave={() => setTip(undefined)}
+              onClick={pick(`o:${o.country}`)}
+            >
+              <circle r={Math.max(12, o.r * 2.2)} className="hit" />
               <circle r={o.r * 2.2} className="halo" />
               <circle r={o.r} className="core" />
               {o.z > 0.3 && <text x={o.r + 5} y="3.5" className="olbl">{`${o.country} · ${compact(o.requests)}`}</text>}
             </g>
           ))}
           {nodes.map((n) => (
-            <g key={n.id} className={`gn ${n.live ? "live" : ""}`} transform={`translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})`} opacity={Math.min(1, n.z * 2.2).toFixed(2)}>
+            <g
+              key={n.id}
+              className={`gn ${n.live ? "live" : ""} ${pinned === `n:${n.id}` ? "on" : ""}`}
+              transform={`translate(${n.x.toFixed(1)} ${n.y.toFixed(1)})`}
+              opacity={Math.min(1, n.z * 2.2).toFixed(2)}
+              onPointerEnter={() => setTip(nodeTip(n))}
+              onPointerLeave={() => setTip(undefined)}
+              onClick={pick(`n:${n.id}`)}
+            >
+              <circle r="10" className="hit" />
               {n.live && <circle r="9" className="halo" />}
               <circle r={n.live ? 4 : 3} className="dot" />
-              {n.z > 0.35 && <g transform="translate(0 -14)">
-                <rect x={-(n.n.length * 3.6 + 9)} y="-9" width={n.n.length * 7.2 + 18} height="17" rx="3" className="pill" />
-                <text textAnchor="middle" y="3" className="lbl">{n.n.toUpperCase()}</text>
-              </g>}
+              {n.z > 0.35 && (
+                <g transform="translate(0 -14)">
+                  <rect x={-(n.n.length * 3.6 + 9)} y="-9" width={n.n.length * 7.2 + 18} height="17" rx="3" className="pill" />
+                  <text textAnchor="middle" y="3" className="lbl">{n.n.toUpperCase()}</text>
+                </g>
+              )}
             </g>
           ))}
         </g>
       </svg>
+      {shown && (
+        <div
+          className={`lp-globe-tip ${shown.tone}`}
+          style={{ left: `${(shown.x / GW) * 100}%`, top: `${(shown.y / GH) * 100}%` }}
+          role="status"
+        >
+          <strong>{shown.title}</strong>
+          <span className="mono">{shown.sub}</span>
+        </div>
+      )}
       <div className="lp-globe-key mono">
         <span><i className="origin" /> WEBHOOK ORIGINS{origins.length ? ` · ${origins.length} ${origins.length === 1 ? "COUNTRY" : "COUNTRIES"}` : ""}</span>
         <span><i className="live" /> PROVIDER WITH TRAFFIC</span>
         <span><i /> SUPPORTED</span>
+        <span className="hint">DRAG TO TURN</span>
       </div>
     </div>
   );

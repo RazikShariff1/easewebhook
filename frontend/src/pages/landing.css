@@ -207,6 +207,22 @@ body:has(.lp) { background: #fafaf9; }
 .lp-globe .go .halo { fill: rgba(31,157,85,.16); animation: lp-halo 2.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
 .lp-globe .go .olbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; fill: #1a7a44; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
 .lp-globe-key i.origin { background: #1f9d55; }
+.lp-globe-svg { cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; outline: none; }
+.lp-globe-svg:active { cursor: grabbing; }
+.lp-globe-svg:focus-visible { outline: 2px solid #1f4fd8; outline-offset: 4px; border-radius: 8px; }
+.lp-globe .hit { fill: transparent; cursor: pointer; }
+.lp-globe .go, .lp-globe .gn { cursor: pointer; }
+.lp-globe .gn:hover .pill, .lp-globe .gn.on .pill { stroke: #151515; }
+.lp-globe .gn:hover .dot, .lp-globe .gn.on .dot { fill: #151515; }
+.lp-globe .gn.live:hover .dot, .lp-globe .gn.live.on .dot { fill: #1f4fd8; }
+.lp-globe .go:hover .core, .lp-globe .go.on .core { stroke: #1a7a44; }
+.lp-globe-tip { position: absolute; z-index: 3; transform: translate(-50%, calc(-100% - 14px)); pointer-events: none; background: #fff; border: 1px solid var(--l-line);
+  border-radius: 6px; padding: 7px 10px; box-shadow: 0 6px 18px rgba(0,0,0,.1); display: grid; gap: 2px; white-space: nowrap; max-width: 260px; }
+.lp-globe-tip strong { font-size: 13px; font-weight: 600; }
+.lp-globe-tip span { font-size: 10.5px; color: var(--l-muted); letter-spacing: .02em; }
+.lp-globe-tip.origin { border-color: #b9e2c9; } .lp-globe-tip.origin strong { color: #1a7a44; }
+.lp-globe-tip.live { border-color: #c9d5f7; } .lp-globe-tip.live strong { color: #1f4fd8; }
+.lp-globe-key .hint { color: #b0b0ac; }
 .lp-globe-key { flex-wrap: wrap; display: flex; justify-content: center; gap: 18px; font-size: 10px; letter-spacing: .08em; color: var(--l-faint); margin-top: 6px; }
 .lp-globe-key span { display: inline-flex; align-items: center; gap: 6px; }
 .lp-globe-key i { width: 7px; height: 7px; border-radius: 50%; background: #b9b9b5; }
