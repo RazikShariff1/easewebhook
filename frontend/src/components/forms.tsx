@@ -12,7 +12,7 @@ import {
 } from "../lib/api";
 import { useQuery } from "../lib/hooks";
 import { pretty, tryParseJSON } from "../lib/format";
-import { CopyText, Drawer, Field, Toggle, useAction } from "./ui";
+import { CopyText, Drawer, Dropdown, Field, Toggle, useAction } from "./ui";
 import { OptionPicker } from "./OptionPicker";
 import { DEST_TYPES, DestinationIcon } from "./DestinationIcon";
 import { useSourceTypes, type SourceType } from "../lib/sourceTypes";
@@ -38,6 +38,7 @@ export interface SourceDraft {
   apiKey: string;
   username: string;
   password: string;
+  customOn: boolean;
   customBody: string;
   customType: string;
 }
@@ -59,6 +60,7 @@ export function sourceDraft(s?: Source): SourceDraft {
     apiKey: v?.api_key ?? "",
     username: v?.username ?? "",
     password: v?.password ?? "",
+    customOn: !!s?.custom_response,
     customBody: s?.custom_response?.body ?? "",
     customType: s?.custom_response?.content_type ?? "application/json",
   };
@@ -79,7 +81,13 @@ export function sourcePayload(d: SourceDraft, editing: boolean) {
     description: d.description || null,
     allowed_http_methods: d.methods,
     verification,
-    custom_response: d.customBody ? { content_type: d.customType, body: d.customBody } : editing ? { content_type: "", body: "" } : undefined,
+    // An empty body turns the custom response off on the server.
+    custom_response:
+      d.customOn && d.customBody.trim()
+        ? { content_type: d.customType, body: d.customBody }
+        : editing
+          ? { content_type: "", body: "" }
+          : undefined,
   };
 }
 
@@ -279,17 +287,84 @@ export function SourceFields({
         </>
       )}
 
-      <Field label="Custom response (optional)" hint="Returned to the sender instead of the default JSON acknowledgement.">
-        <div className="field-row" style={{ gridTemplateColumns: "180px 1fr" }}>
-          <select className="select" value={d.customType} onChange={(e) => set({ customType: e.target.value })}>
-            <option>application/json</option>
-            <option>text/plain</option>
-            <option>application/xml</option>
-          </select>
-          <input className="input mono" value={d.customBody} onChange={(e) => set({ customBody: e.target.value })} placeholder='{"ok":true}' />
-        </div>
-      </Field>
+      <CustomResponseFields d={d} set={set} />
     </>
+  );
+}
+
+const CUSTOM_TYPES = [
+  { value: "application/json", label: "JSON", sample: '{\n  "received": true\n}' },
+  { value: "text/plain", label: "TEXT", sample: "OK" },
+  { value: "application/xml", label: "XML", sample: "<response><received>true</received></response>" },
+];
+
+/** "Customize response" card: what the source answers senders instead of the default JSON acknowledgement. */
+function CustomResponseFields({ d, set }: { d: SourceDraft; set: (p: Partial<SourceDraft>) => void }) {
+  const cur = CUSTOM_TYPES.find((x) => x.value === d.customType) ?? CUSTOM_TYPES[0];
+  const json = d.customType === "application/json" && d.customBody.trim() ? tryParseJSON(d.customBody) : undefined;
+  const tooLong = d.customBody.length > 1000;
+
+  const chooseType = (t: (typeof CUSTOM_TYPES)[number]) =>
+    // swap in the new sample only while the body is still the previous sample
+    set({ customType: t.value, customBody: !d.customBody || d.customBody === cur.sample ? t.sample : d.customBody });
+
+  return (
+    <div className={`cr-card ${d.customOn ? "on" : ""}`}>
+      <div className="cr-head">
+        <Toggle
+          checked={d.customOn}
+          onChange={(v) => set({ customOn: v, customBody: v && !d.customBody ? cur.sample : d.customBody })}
+          label={
+            <>
+              Customize response{" "}
+              <Info size={15} className="faint" aria-label="Replace the default acknowledgement that senders receive (HTTP 200)." />
+            </>
+          }
+        />
+        {d.customOn && (
+          <Dropdown
+            align="right"
+            trigger={(_, t) => (
+              <button type="button" className="btn sm cr-type" onClick={t} aria-label="Response content type">
+                {cur.label} <ChevronDown size={14} />
+              </button>
+            )}
+          >
+            {(close) =>
+              CUSTOM_TYPES.map((t) => (
+                <button key={t.value} type="button" className="menu-item" onClick={() => (chooseType(t), close())}>
+                  {t.label}
+                </button>
+              ))
+            }
+          </Dropdown>
+        )}
+      </div>
+      {d.customOn ? (
+        <div className="cr-body">
+          <textarea
+            className="cr-editor"
+            rows={6}
+            spellCheck={false}
+            value={d.customBody}
+            onChange={(e) => set({ customBody: e.target.value })}
+            aria-label="Response body"
+          />
+          <div className="cr-foot">
+            {json && !json.ok ? (
+              <span className="form-error">Invalid JSON: {json.error}</span>
+            ) : (
+              <span className={tooLong ? "form-error" : "faint"}>{d.customBody.length}/1000</span>
+            )}
+            <span className="cr-lang">{cur.label}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="cr-off faint">
+          Off — senders get the default <span className="mono">{'{"status":"SUCCESS", "request_id": …}'}</span> acknowledgement.
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"database/sql"
 	"errors"
 	"strings"
@@ -49,6 +50,36 @@ func scanSource(s scanner) (*models.Source, error) {
 	return &src, nil
 }
 
+// Custom responses replace the default acknowledgement returned to senders.
+const maxCustomResponseBody = 1000
+
+var customResponseTypes = map[string]bool{"application/json": true, "text/plain": true, "application/xml": true}
+
+// normalizeCustomResponse validates a custom response; an empty body means "off" (nil).
+func normalizeCustomResponse(c *models.CustomResponse) (*models.CustomResponse, error) {
+	if c == nil || strings.TrimSpace(c.Body) == "" {
+		return nil, nil
+	}
+
+	if c.ContentType == "" {
+		c.ContentType = "application/json"
+	}
+
+	if !customResponseTypes[c.ContentType] {
+		return nil, apierr.BadRequest("custom_response.content_type must be application/json, text/plain or application/xml")
+	}
+
+	if len(c.Body) > maxCustomResponseBody {
+		return nil, apierr.BadRequest("custom_response.body must be at most %d characters", maxCustomResponseBody)
+	}
+
+	if c.ContentType == "application/json" && !json.Valid([]byte(c.Body)) {
+		return nil, apierr.BadRequest("custom_response.body must be valid JSON for application/json")
+	}
+
+	return c, nil
+}
+
 func normalizeMethods(m []string) string {
 	if len(m) == 0 {
 		return "POST,PUT,PATCH,DELETE,GET"
@@ -92,10 +123,15 @@ func (s *Store) CreateSource(ctx context.Context, in *models.SourceInput) (*mode
 		verif = nil // providers verify with their own scheme
 	}
 
+	custom, err := normalizeCustomResponse(in.CustomResponse)
+	if err != nil {
+		return nil, err
+	}
+
 	row := s.db.QueryRowContext(ctx, `INSERT INTO sources (id, name, key, description, allowed_methods, verification, custom_response, workspace_id, type, config)
 		VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10::jsonb) RETURNING `+sourceCols,
 		ids.New(ids.Source), strings.TrimSpace(*in.Name), ids.SourceKey(), in.Description,
-		normalizeMethods(methods), jsonParam(verif), jsonParam(in.CustomResponse), s.ws, st.ID, jsonParam(cfg))
+		normalizeMethods(methods), jsonParam(verif), jsonParam(custom), s.ws, st.ID, jsonParam(cfg))
 
 	src, err := scanSource(row)
 	if isUniqueViolation(err) {
@@ -234,9 +270,8 @@ func (s *Store) UpdateSource(ctx context.Context, id string, in *models.SourceIn
 	}
 
 	if in.CustomResponse != nil {
-		custom = in.CustomResponse
-		if custom.Body == "" {
-			custom = nil
+		if custom, err = normalizeCustomResponse(in.CustomResponse); err != nil {
+			return nil, err
 		}
 	}
 

@@ -83,7 +83,7 @@ function authSummary(src: Source, verifies: boolean, typeName?: string): string 
     return { hmac: "HMAC signature", api_key: "API key header", basic_auth: "Basic auth" }[src.verification.type] ?? src.verification.type;
   }
   if (verifies && Object.values(src.config).some(Boolean)) return `${typeName} signature`;
-  return "None";
+  return "Disabled";
 }
 
 function Details({ src, onEdit }: { src: Source; onEdit: () => void }) {
@@ -113,14 +113,23 @@ function Details({ src, onEdit }: { src: Source; onEdit: () => void }) {
       <dl className="dd-list">
         <dt>Type</dt>
         <dd><span className="chip-static"><SourceIcon icon={t?.icon ?? "webhook"} name={t?.name} size={14} /> {t?.name ?? src.type}</span></dd>
-        <dt>Allowed HTTP methods</dt>
+        <dt>HTTP methods</dt>
         <dd style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {src.allowed_http_methods.map((m) => <span key={m} className="chip-static mono">{m}</span>)}
         </dd>
-        <dt>Authentication</dt>
+        <dt>Authentication method</dt>
         <dd><span className="chip-static">{authSummary(src, !!t?.verifies_signatures, t?.name)}</span></dd>
         <dt>Custom response</dt>
-        <dd>{src.custom_response ? <span className="chip-static mono">{src.custom_response.content_type}</span> : <span className="chip-static">Default</span>}</dd>
+        <dd>
+          {src.custom_response ? (
+            <>
+              <span className="chip-static">On · {{ "application/json": "JSON", "text/plain": "TEXT", "application/xml": "XML" }[src.custom_response.content_type] ?? src.custom_response.content_type}</span>
+              <pre className="code" style={{ marginTop: 8, maxHeight: 140 }}>{src.custom_response.body}</pre>
+            </>
+          ) : (
+            <span className="chip-static">Off</span>
+          )}
+        </dd>
       </dl>
       <hr />
       <h3>Metadata</h3>

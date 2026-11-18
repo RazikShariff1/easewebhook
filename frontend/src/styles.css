@@ -824,3 +824,14 @@ code, .mono { font-family: var(--mono); font-size: 13px; }
 /* branches fork from the "+" junction (its centre is 40px into the line), not from the source's edge */
 .conn-dests .conn-trunk { left: 40px; }
 .conn-row ~ .conn-row .conn-line::before { left: 40px; }
+/* customize response card */
+.cr-card { border: 1px solid var(--border); border-radius: 10px; background: var(--bg); overflow: visible; }
+.cr-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+.cr-card.on .cr-head { border-bottom: 1px solid var(--border); }
+.cr-type { min-width: 84px; justify-content: space-between; }
+.cr-body { position: relative; }
+.cr-editor { display: block; width: 100%; min-height: 150px; border: 0; background: transparent; color: var(--text); resize: vertical;
+  padding: 14px 16px; font: 13px/1.6 var(--mono); outline: none; }
+.cr-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 12px; font-size: 12px; }
+.cr-lang { color: var(--text-muted); font-size: 13px; }
+.cr-off { margin: 0; padding: 0 14px 14px; font-size: 13px; }
