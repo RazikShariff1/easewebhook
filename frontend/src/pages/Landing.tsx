@@ -19,11 +19,6 @@ export function LandingPage() {
       <header className="lp-nav">
         <div className="lp-wrap lp-nav-in">
           <Link to="/" aria-label="EaseWebhook home"><Logo /></Link>
-          <nav className="lp-links">
-            <a href="#how">How it works</a>
-            <a href="#features">Features</a>
-            <a href="#delivery">Reliability</a>
-          </nav>
           <div className="lp-nav-cta">
             {!user && <Link to="/login" className="lp-btn">Sign in</Link>}
             <Link to={primaryTo} className="lp-btn primary">{user ? "Dashboard" : "Get started"}</Link>
