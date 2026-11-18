@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
+import { ArrowRight, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
 import { COUNTRY_CENTRE, countryName } from "../lib/countries";
@@ -104,71 +104,129 @@ export function LandingPage() {
         </div>
       </section>
 
+      <section id="send" className="lp-wrap">
+        <div className="lp-frame send">
+          <div className="lp-frame-top">
+            <div className="lp-frame-copy">
+              <h2>Webhook Delivery</h2>
+              <div className="lp-eyebrow blue">SEND WEBHOOKS</div>
+              <p>Add webhook delivery to your own API or SaaS. Publish an event once; we sign it, fan it out to every customer endpoint and retry until it lands.</p>
+              <div className="lp-actions left">
+                <Link to={primaryTo} className="lp-btn primary">{primaryLabel}</Link>
+                <a href="#delivery" className="lp-btn">Learn more</a>
+              </div>
+            </div>
+            <SendDiagram />
+          </div>
+
+          <div className="lp-cells">
+            <Cell icon={<Send />} title="Publish with one API call">
+              <div className="lp-card">
+                <div className="lp-card-head mono">PUBLISH API</div>
+                <pre className="mono small">{`curl -X POST \
+  "https://api.easewebhook.com/e/`}<mark>{`order-events`}</mark>{`" \
+  -H "Authorization: Bearer ew_live…" \
+  -d '{"type":"order.created"}'`}</pre>
+                <div className="lp-sent mono"><i /> 202 ACCEPTED · fanning out to 3 endpoints</div>
+              </div>
+            </Cell>
+            <Cell icon={<PenLine />} title="Sign and deliver to any endpoint">
+              <div className="lp-card">
+                <div className="lp-card-head mono">ORDER.CREATED</div>
+                <ul className="lp-dests">
+                  {[
+                    ["acme.com/hooks", "HMAC", "on"],
+                    ["globex.io/webhooks", "BEARER", "on"],
+                    ["initech.dev/events", "API KEY", "on"],
+                    ["umbrella.co/in", "BASIC", ""],
+                  ].map(([u, a, c]) => (
+                    <li key={u} className={c}><span className="mono">{u}</span><b className="mono">{a}</b></li>
+                  ))}
+                </ul>
+              </div>
+            </Cell>
+            <Cell icon={<ListChecks />} title="Show every attempt, replay failures">
+              <div className="lp-card">
+                <div className="lp-card-head mono">DELIVERY LOG</div>
+                <table className="lp-log mono">
+                  <tbody>
+                    <tr><td>acme.com</td><td><i className="ok">200</i></td><td>84ms</td></tr>
+                    <tr><td>globex.io</td><td><i className="bad">503</i></td><td>retry 1/5</td></tr>
+                    <tr><td>globex.io</td><td><i className="ok">200</i></td><td>112ms</td></tr>
+                    <tr><td>initech.dev</td><td><i className="ok">200</i></td><td>61ms</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </Cell>
+          </div>
+        </div>
+      </section>
+
       <ProductionSection />
 
-      <section id="delivery" className="lp-wrap lp-reliab">
-        <h2>Built so nothing gets dropped</h2>
-        <p className="lp-sub small">Every request is stored the moment it arrives, so a slow or broken destination never means lost data.</p>
-
-        <div className="lp-rframe">
-          <ol className="lp-life mono" aria-label="What happens to every webhook">
-            {[
-              ["01", "RECEIVED", "public source URL"],
-              ["02", "VERIFIED", "signature checked"],
-              ["03", "STORED", "before we reply"],
-              ["04", "ROUTED", "filter · transform"],
-              ["05", "DELIVERED", "retried until 2xx"],
-            ].map(([n, t, d]) => (
-              <li key={n}>
-                <span className="n">{n}</span>
-                <b>{t}</b>
-                <small>{d}</small>
-              </li>
-            ))}
-          </ol>
-
-          <div className="lp-rcells">
-            <div className="lp-rcell">
-              <h3><span><ShieldCheck /></span>Verified ingestion</h3>
-              <p>HMAC, Ed25519, API key or basic auth on every source URL. Forged or replayed requests never reach your app.</p>
-              <div className="lp-rdemo mono">
-                <div className="row bad"><i>401</i> bad signature</div>
-                <div className="row"><i>→</i> <em>REJECTED</em> · reason kept</div>
+      <section id="delivery" className="lp-wrap">
+        <div className="lp-frame">
+          <div className="lp-frame-top">
+            <div className="lp-frame-copy">
+              <h2>Guaranteed Delivery</h2>
+              <div className="lp-eyebrow blue">NEVER DROP AN EVENT</div>
+              <p>Every request is stored before we reply, then retried until your destination answers, with a full trail to debug.</p>
+              <div className="lp-actions left">
+                <Link to={primaryTo} className="lp-btn primary">{primaryLabel}</Link>
+                <a href="#delivery-cells" className="lp-btn">Learn more</a>
               </div>
             </div>
+            <DeliveryDiagram />
+          </div>
 
-            <div className="lp-rcell">
-              <h3><span><RotateCcw /></span>Automatic retries</h3>
-              <p>Linear or exponential backoff per connection, plus manual and bulk retry when a destination comes back.</p>
-              <div className="lp-rdemo mono">
-                <div className="lp-retry" aria-label="Attempt 1 failed, attempt 2 failed, attempt 3 succeeded">
-                  <span className="a bad">1<small>503</small></span>
-                  <span className="gap">+1m</span>
-                  <span className="a bad">2<small>504</small></span>
-                  <span className="gap">+2m</span>
-                  <span className="a ok">3<small>200</small></span>
+          <div id="delivery-cells" className="lp-cells">
+            <Cell icon={<ShieldCheck />} title="Verify every sender">
+              <div className="lp-dcode mono">
+                <div>curl -X POST "…/e/<mark>shop-orders</mark>" \</div>
+                <div>{"  "}-H "X-Signature: sha256=9f2c…"</div>
+              </div>
+              <div className="lp-dlink" aria-hidden="true"><i /></div>
+              <div className="lp-dstate mono"><span><Check size={12} /></span>SIGNATURE VERIFIED</div>
+            </Cell>
+
+            <Cell icon={<RotateCcw />} title="Retry until it lands">
+              <div className="lp-chips mono" aria-hidden="true">
+                <span className="dim">ORDER.UPDATED</span>
+                <span className="on">ORDER.CREATED</span>
+                <span className="dim">ORDER.CANCELLED</span>
+              </div>
+              <div className="lp-dlink short" aria-hidden="true"><i /></div>
+              <div className="lp-attempts">
+                {[
+                  ["1", "503 Unavailable", "0s", "bad"],
+                  ["2", "504 Timeout", "+1m", "bad"],
+                  ["3", "200 OK", "+2m", "ok"],
+                ].map(([n, r, t, tone]) => (
+                  <div key={n} className={`row ${tone}`}>
+                    <i className="mono">{n}</i>
+                    <span>Attempt</span>
+                    <b className="mono">{r}</b>
+                    <small className="mono">{t}</small>
+                  </div>
+                ))}
+              </div>
+            </Cell>
+
+            <Cell icon={<ScanSearch />} title="Debug every delivery">
+              <div className="lp-portal">
+                <div className="bar mono"><span>←</span><span>→</span><span>↻</span><em>easewebhook.app/events</em></div>
+                <div className="body">
+                  <div className="ttl">Events <span className="mono">24</span></div>
+                  <div className="tools"><span className="search">Filter…</span><span className="retry"><RotateCcw size={12} /> Retry</span></div>
+                  <div className="tbl mono">
+                    <div className="th"><span>Status</span><span>Destination</span><span>Response</span></div>
+                    <div><span><i className="ok" />Successful</span><span>orders-api</span><span>200</span></div>
+                    <div><span><i className="bad" />Failed</span><span>crm-sync</span><span>503</span></div>
+                    <div className="fade"><span><i className="ok" />Successful</span><span>slack-alerts</span><span>200</span></div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-            <div className="lp-rcell">
-              <h3><span><ScanSearch /></span>Full audit trail</h3>
-              <p>Every request, event and delivery attempt is kept and searchable by status, response or payload.</p>
-              <div className="lp-rdemo mono">
-                <div className="row"><i>req</i> POST /e/shop · <em>ACCEPTED</em></div>
-                <div className="row"><i>evt</i> shop → api · <em className="ok">SUCCESSFUL</em></div>
-                <div className="row"><i>atm</i> 200 OK · 63 ms</div>
-              </div>
-            </div>
-
-            <div className="lp-rcell">
-              <h3><span><Code2 /></span>JavaScript transforms</h3>
-              <p>Reshape payloads in flight with a small handler, and test it against a real request before you ship.</p>
-              <pre className="lp-rdemo mono">{`addHandler("transform", r => {
-  r.body.total /= 100;
-  return r;
-});`}</pre>
-            </div>
+            </Cell>
           </div>
         </div>
       </section>
@@ -188,6 +246,47 @@ export function LandingPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+/** One event: stored, then delivery attempts until a 2xx (animated in sequence). */
+function DeliveryDiagram() {
+  const OUT = [
+    { y: 46, label: "STORED", tone: "store", icon: "M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3Zm0 0v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" },
+    { y: 112, label: "ATTEMPT 1 · 503", tone: "bad" },
+    { y: 178, label: "RETRY +1m · 504", tone: "bad" },
+    { y: 244, label: "RETRY +2m · 200", tone: "ok" },
+  ];
+  const outPath = (y: number) => `M432 145 C 500 145, 500 ${y}, 560 ${y}`;
+  return (
+    <svg className="lp-diagram lp-ddiag" viewBox="0 0 760 290" role="img" aria-label="An incoming event is stored, fails twice with 503 and 504, and is delivered on the third attempt">
+      <path d="M200 145 L 328 145" className="flow" />
+      <path d="M200 145 L 328 145" className="dflow in" pathLength={100} />
+      {OUT.map((o, i) => (
+        <g key={o.y}>
+          <path d={outPath(o.y)} className="flow" />
+          <path d={outPath(o.y)} className={`dflow ${o.tone}`} pathLength={100} style={{ animationDelay: `${0.6 + i * 0.7}s` }} />
+        </g>
+      ))}
+      <g>
+        <rect x="24" y="124" width="176" height="42" rx="21" className="pill" />
+        <g transform="translate(44 136) scale(.75)" className="ico"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2M6 17l3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06M12 6l3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8" /></g>
+        <text x="74" y="150" className="pt mono">INCOMING</text>
+      </g>
+      {OUT.map((o) => (
+        <g key={o.label} className={`dout ${o.tone}`}>
+          <rect x="560" y={o.y - 19} width="182" height="38" rx="19" className="pill" />
+          {o.icon ? (
+            <g transform={`translate(578 ${o.y - 9}) scale(.75)`} className="ico"><path d={o.icon} /></g>
+          ) : (
+            <circle cx="587" cy={o.y} r="5" className="led" />
+          )}
+          <text x="604" y={o.y + 5} className="pt mono sm">{o.label}</text>
+        </g>
+      ))}
+      <rect x="334" y="99" width="92" height="92" rx="18" className="hub" />
+      <image href="/logo-icon.png" x="352" y="117" width="56" height="56" />
+    </svg>
   );
 }
 
@@ -216,7 +315,7 @@ const LEG_MS = 1000; // time a request takes to cross one side of the hub
 type Req = { id: number; s: number; d: number };
 
 // Random requests: each picks a sender and a destination, travels in, then out. Several overlap at once.
-function useRequests() {
+function useRequests(nSrc = SRC.length, nDst = DST.length) {
   const [reqs, setReqs] = useState<Req[]>([]);
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -224,7 +323,7 @@ function useRequests() {
     const spawn = () => {
       if (!alive) return;
       if (!document.hidden) {
-        const r = { id: ++id, s: Math.floor(Math.random() * SRC.length), d: Math.floor(Math.random() * DST.length) };
+        const r = { id: ++id, s: Math.floor(Math.random() * nSrc), d: Math.floor(Math.random() * nDst) };
         setReqs((p) => [...p.slice(-7), r]);
         window.setTimeout(() => setReqs((p) => p.filter((x) => x.id !== r.id)), LEG_MS * 2 + 100);
       }
@@ -232,7 +331,7 @@ function useRequests() {
     };
     timer = window.setTimeout(spawn, 300);
     return () => { alive = false; clearTimeout(timer); };
-  }, []);
+  }, [nSrc, nDst]);
   return reqs;
 }
 
@@ -265,6 +364,50 @@ function GatewayDiagram() {
           <rect x="590" y={n.y - 21} width="148" height="42" rx="21" className="pill" />
           <g transform={`translate(610 ${n.y - 9}) scale(.75)`} className="ico"><path d={n.d} /></g>
           <text x="640" y={n.y + 5} className="pt mono">{n.name}</text>
+        </g>
+      ))}
+      <rect x="334" y="94" width="92" height="92" rx="18" className="hub" />
+      <image href="/logo-icon.png" x="352" y="112" width="56" height="56" />
+    </svg>
+  );
+}
+
+const ENDPOINTS = [
+  { y: 36, name: "acme.com" },
+  { y: 105, name: "globex.io" },
+  { y: 175, name: "initech.dev" },
+  { y: 244, name: "umbrella.co" },
+];
+
+function SendDiagram() {
+  const inPath = "M170 140 L 328 140";
+  const outPath = (y: number) => `M432 140 C 510 140, 505 ${y}, 590 ${y}`;
+  const reqs = useRequests(1, ENDPOINTS.length);
+  return (
+    <svg className="lp-diagram" viewBox="0 0 760 280" role="img" aria-label="Your API publishes an event to EaseWebhook, which signs it and delivers it to every customer endpoint">
+      <path d={inPath} className="flow" />
+      {ENDPOINTS.map((n) => <path key={n.y} d={outPath(n.y)} className="flow" />)}
+      {reqs.map((r) => (
+        <g key={r.id}>
+          <path d={inPath} pathLength={100} className="pulse tail" />
+          <path d={inPath} pathLength={100} className="pulse head" />
+          {/* an event fans out to every endpoint at once */}
+          {ENDPOINTS.map((n) => (
+            <g key={n.y}>
+              <path d={outPath(n.y)} pathLength={100} className="pulse tail" style={{ animationDelay: `${LEG_MS}ms` }} />
+              <path d={outPath(n.y)} pathLength={100} className="pulse head" style={{ animationDelay: `${LEG_MS}ms` }} />
+            </g>
+          ))}
+        </g>
+      ))}
+      <rect x="22" y="119" width="148" height="42" rx="21" className="pill" />
+      <g transform="translate(42 131) scale(.75)" className="ico"><path d="M8 9h8M8 13h5M4 5h16v14H4z" /></g>
+      <text x="72" y="145" className="pt mono">YOUR API</text>
+      {ENDPOINTS.map((n) => (
+        <g key={n.name}>
+          <rect x="590" y={n.y - 21} width="148" height="42" rx="21" className="pill" />
+          <circle cx="614" cy={n.y} r="4.5" className="okdot" />
+          <text x="630" y={n.y + 5} className="pt mono sm">{n.name}</text>
         </g>
       ))}
       <rect x="334" y="94" width="92" height="92" rx="18" className="hub" />
