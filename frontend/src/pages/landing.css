@@ -327,3 +327,36 @@ body:has(.lp) { background: #fafaf9; }
 .lp-log tr.new { animation: lp-row .45s ease-out; }
 @keyframes lp-row { from { opacity: 0; transform: translateY(-8px); background: #f3f6fe; } }
 @media (prefers-reduced-motion: reduce) { .lp-log tr.new { animation: none; } }
+
+/* Cards fade out at the bottom edge, like they continue past the frame */
+.lp-card { -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 98%); mask-image: linear-gradient(to bottom, #000 55%, transparent 98%); }
+.lp-card.pad { height: 270px; padding: 14px 14px 0; background: transparent; border: 0; border-radius: 0; position: relative; }
+.lp-code { margin: 0; padding: 14px 16px !important; border: 1px solid var(--l-line); border-radius: 10px; background: #fcfcfb; box-shadow: 0 1px 2px rgba(0,0,0,.04); font-size: 12px !important; line-height: 1.65 !important; color: #333 !important; white-space: pre !important; overflow: hidden; }
+.lp-code mark { background: #eaf0fe !important; color: #1f4fd8 !important; border: 1px solid #c9d5f7; border-radius: 4px; padding: 0 4px !important; }
+.lp-vline { width: 1px; height: 26px; margin: 0 auto; background: linear-gradient(#1f4fd8, #c9d5f7); }
+.lp-vline.dotted { background: none; border-left: 1px dotted #9a9a96; }
+.lp-status { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 11px; letter-spacing: .08em; color: var(--l-faint); margin-top: 12px; }
+.lp-status i { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #9a9a96; }
+.lp-status i.spin { border-color: #9a9a96 transparent #9a9a96 #9a9a96; animation: lp-spin 1s linear infinite; }
+.lp-status.ok { color: #1a7a44; } .lp-status.ok i { background: #1a7a44; border-color: #1a7a44; }
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+.lp-chips { display: flex; justify-content: center; gap: 10px; margin: 0 -14px; padding: 8px 0 10px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+.lp-chips span { flex-shrink: 0; font-size: 12px; letter-spacing: .04em; color: #9a9a96; padding: 9px 16px; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.08); border: 1px solid #efefed; }
+.lp-chips span.on { color: #1f4fd8; border-color: #c9d5f7; box-shadow: 0 0 0 4px rgba(31,79,216,.08), 0 2px 8px rgba(31,79,216,.15); }
+.lp-dlist { list-style: none; margin: 0; padding: 6px; border: 1px solid var(--l-line); border-radius: 10px; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+.lp-dlist li { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; font-size: 14px; color: #222; }
+.lp-dlist li.sel { background: #f4f4f2; }
+.lp-dlist .tile { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.lp-dlist b { margin-left: auto; font-size: 10px; font-weight: 500; letter-spacing: .06em; color: var(--l-faint); }
+.lp-browser { padding: 0 !important; margin: 0 -28px 0 0; border: 1px solid var(--l-line) !important; border-right: 0 !important; border-bottom: 0 !important; border-radius: 10px 0 0 0 !important; background: #fff !important; }
+.lp-bbar { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--l-line); color: #777; }
+.lp-bbar .url { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #333; white-space: nowrap; }
+.lp-bbody { padding: 16px 16px 0; }
+.lp-bt { font-size: 18px; font-weight: 500; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.lp-bt em { font-style: normal; font-size: 12px; background: #f1f1ef; border-radius: 5px; padding: 2px 8px; }
+.lp-bfilter { display: flex; gap: 8px; margin-bottom: 12px; font-size: 13px; }
+.lp-bfilter span, .lp-bfilter b { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--l-line); border-radius: 6px; font-weight: 400; }
+.lp-bfilter span { flex: 1; color: #888; } .lp-bfilter b { color: #1f4fd8; white-space: nowrap; }
+.lp-browser .lp-log { background: #fcfcfb; border: 1px solid var(--l-line); border-radius: 8px 8px 0 0; }
+.lp-log th { text-align: left; font-weight: 400; font-size: 11px; color: #777; padding: 8px 12px; background: #f7f7f5; border-bottom: 1px solid var(--l-line); }
+.lp-browser .lp-log td { padding: 9px 12px; }

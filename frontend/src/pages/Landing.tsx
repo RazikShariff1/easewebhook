@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowLeft, RotateCw, Link2, Search, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
 import { COUNTRY_CENTRE, countryName } from "../lib/countries";
@@ -121,35 +121,48 @@ export function LandingPage() {
 
           <div className="lp-cells">
             <Cell icon={<Send />} title="Publish with one API call">
-              <div className="lp-card">
-                <div className="lp-card-head mono">PUBLISH API</div>
-                <pre className="mono small">{`curl -X POST \
-  https://easewebhook.onrender.com/e/`}<mark>{`order-events`}</mark>{` \
-  -H "Authorization: Bearer $EASEWEBHOOK_KEY" \
-  -H "Content-Type: application/json" \
+              <div className="lp-card pad">
+                <pre className="lp-code mono">{`curl -X POST \\
+  https://easewebhook.onrender.com/e/`}<mark>{`order-events`}</mark>{` \\
+  -H "Authorization: Bearer $KEY" \\
   -d '{"type":"order.created"}'`}</pre>
-                <div className="lp-sent mono"><i /> 202 ACCEPTED · fanning out to 3 endpoints</div>
+                <div className="lp-vline dotted" />
+                <div className="lp-status mono"><i className="spin" />FANNING OUT TO 4 ENDPOINTS</div>
+                <div className="lp-status mono ok"><i />202 ACCEPTED · STORED</div>
               </div>
             </Cell>
             <Cell icon={<PenLine />} title="Sign and deliver to any endpoint">
-              <div className="lp-card">
-                <div className="lp-card-head mono">ORDER.CREATED</div>
-                <ul className="lp-dests">
+              <div className="lp-card pad">
+                <div className="lp-chips mono">
+                  <span>ORDER.UPDATED</span><span className="on">ORDER.CREATED</span><span>ORDER.CANCELLED</span>
+                </div>
+                <div className="lp-vline" />
+                <ul className="lp-dlist">
                   {[
-                    ["acme.com/hooks", "HMAC", "on"],
-                    ["globex.io/webhooks", "BEARER", "on"],
-                    ["initech.dev/events", "API KEY", "on"],
-                    ["umbrella.co/in", "BASIC", ""],
-                  ].map(([u, a, c]) => (
-                    <li key={u} className={c}><span className="mono">{u}</span><b className="mono">{a}</b></li>
+                    ["A", "acme.com/hooks", "HMAC", "#1f4fd8"],
+                    ["G", "globex.io/webhooks", "Bearer", "#7c3aed"],
+                    ["I", "initech.dev/events", "API key", "#0f8a5f"],
+                    ["U", "umbrella.co/in", "Basic", "#c2410c"],
+                    ["H", "hooli.xyz/receive", "HMAC", "#be185d"],
+                  ].map(([l, u, a, c], i) => (
+                    <li key={u} className={i === 0 ? "sel" : ""}>
+                      <span className="tile" style={{ background: c }}>{l}</span>{u}<b className="mono">{a}</b>
+                    </li>
                   ))}
                 </ul>
               </div>
             </Cell>
             <Cell icon={<ListChecks />} title="Show every attempt, replay failures">
-              <div className="lp-card">
-                <div className="lp-card-head mono">DELIVERY LOG</div>
-                <DeliveryLog />
+              <div className="lp-card pad lp-browser">
+                <div className="lp-bbar">
+                  <ArrowLeft size={15} /><ArrowRight size={15} /><RotateCw size={14} />
+                  <span className="url"><Link2 size={13} />app.easewebhook.com/events</span>
+                </div>
+                <div className="lp-bbody">
+                  <div className="lp-bt">Deliveries <em className="mono">128</em></div>
+                  <div className="lp-bfilter"><span><Search size={14} />Filter…</span><b><RotateCw size={13} />Retry failed</b></div>
+                  <DeliveryLog />
+                </div>
               </div>
             </Cell>
           </div>
@@ -380,9 +393,10 @@ function DeliveryLog() {
     const t = window.setInterval(() => { if (!document.hidden) setN((x) => x + 1); }, 1700);
     return () => clearInterval(t);
   }, []);
-  const rows = Array.from({ length: 4 }, (_, i) => n - i).map((k) => ({ k, r: LOG_SCRIPT[k % LOG_SCRIPT.length] }));
+  const rows = Array.from({ length: 5 }, (_, i) => n - i).map((k) => ({ k, r: LOG_SCRIPT[k % LOG_SCRIPT.length] }));
   return (
     <table className="lp-log mono">
+      <thead><tr><th>Endpoint</th><th>Status</th><th>Result</th></tr></thead>
       <tbody>
         {rows.map(({ k, r }) => (
           <tr key={k} className={k === n ? "new" : ""}>
