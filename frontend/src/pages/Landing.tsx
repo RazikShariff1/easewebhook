@@ -139,14 +139,14 @@ export function LandingPage() {
                 <div className="lp-vline" />
                 <ul className="lp-dlist">
                   {[
-                    ["A", "acme.com/hooks", "HMAC", "#1f4fd8"],
-                    ["G", "globex.io/webhooks", "Bearer", "#7c3aed"],
-                    ["I", "initech.dev/events", "API key", "#0f8a5f"],
-                    ["U", "umbrella.co/in", "Basic", "#c2410c"],
-                    ["H", "hooli.xyz/receive", "HMAC", "#be185d"],
-                  ].map(([l, u, a, c], i) => (
+                    ["slack", "hooks.slack.com/T0…", "HMAC"],
+                    ["zendesk", "acme.zendesk.com/hooks", "Bearer"],
+                    ["github", "api.github.com/dispatch", "API key"],
+                    ["twilio", "api.twilio.com/events", "Basic"],
+                    ["razorpay", "api.razorpay.com/in", "HMAC"],
+                  ].map(([l, u, a], i) => (
                     <li key={u} className={i === 0 ? "sel" : ""}>
-                      <span className="tile" style={{ background: c }}>{l}</span>{u}<b className="mono">{a}</b>
+                      <span className="tile"><img src={`/brands/${l}.svg`} alt="" width="14" height="14" /></span>{u}<b className="mono">{a}</b>
                     </li>
                   ))}
                 </ul>
@@ -380,9 +380,9 @@ function GatewayDiagram() {
 }
 
 const LOG_SCRIPT: [string, number, string][] = [
-  ["acme.com", 200, "84ms"], ["globex.io", 503, "retry in 10s"], ["initech.dev", 200, "61ms"],
-  ["umbrella.co", 200, "97ms"], ["globex.io", 200, "112ms"], ["acme.com", 200, "73ms"],
-  ["initech.dev", 429, "retry in 30s"], ["initech.dev", 200, "58ms"],
+  ["slack.com", 200, "84ms"], ["zendesk.com", 503, "retry in 10s"], ["github.com", 200, "61ms"],
+  ["twilio.com", 200, "97ms"], ["zendesk.com", 200, "112ms"], ["slack.com", 200, "73ms"],
+  ["github.com", 429, "retry in 30s"], ["github.com", 200, "58ms"],
 ];
 
 // Delivery log that keeps filling, newest on top, like the dashboard's events view.
@@ -409,10 +409,10 @@ function DeliveryLog() {
 }
 
 const ENDPOINTS = [
-  { y: 36, name: "acme.com" },
-  { y: 105, name: "globex.io" },
-  { y: 175, name: "initech.dev" },
-  { y: 244, name: "umbrella.co" },
+  { y: 36, name: "slack.com" },
+  { y: 105, name: "zendesk.com" },
+  { y: 175, name: "github.com" },
+  { y: 244, name: "twilio.com" },
 ];
 
 function SendDiagram() {
