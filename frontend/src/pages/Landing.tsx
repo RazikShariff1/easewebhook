@@ -148,14 +148,7 @@ export function LandingPage() {
             <Cell icon={<ListChecks />} title="Show every attempt, replay failures">
               <div className="lp-card">
                 <div className="lp-card-head mono">DELIVERY LOG</div>
-                <table className="lp-log mono">
-                  <tbody>
-                    <tr><td>acme.com</td><td><i className="ok">200</i></td><td>84ms</td></tr>
-                    <tr><td>globex.io</td><td><i className="bad">503</i></td><td>retry 1/5</td></tr>
-                    <tr><td>globex.io</td><td><i className="ok">200</i></td><td>112ms</td></tr>
-                    <tr><td>initech.dev</td><td><i className="ok">200</i></td><td>61ms</td></tr>
-                  </tbody>
-                </table>
+                <DeliveryLog />
               </div>
             </Cell>
           </div>
@@ -369,6 +362,34 @@ function GatewayDiagram() {
       <rect x="334" y="94" width="92" height="92" rx="18" className="hub" />
       <image href="/logo-icon.png" x="352" y="112" width="56" height="56" />
     </svg>
+  );
+}
+
+const LOG_SCRIPT: [string, number, string][] = [
+  ["acme.com", 200, "84ms"], ["globex.io", 503, "retry in 10s"], ["initech.dev", 200, "61ms"],
+  ["umbrella.co", 200, "97ms"], ["globex.io", 200, "112ms"], ["acme.com", 200, "73ms"],
+  ["initech.dev", 429, "retry in 30s"], ["initech.dev", 200, "58ms"],
+];
+
+// Delivery log that keeps filling, newest on top, like the dashboard's events view.
+function DeliveryLog() {
+  const [n, setN] = useState(4);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const t = window.setInterval(() => { if (!document.hidden) setN((x) => x + 1); }, 1700);
+    return () => clearInterval(t);
+  }, []);
+  const rows = Array.from({ length: 4 }, (_, i) => n - i).map((k) => ({ k, r: LOG_SCRIPT[k % LOG_SCRIPT.length] }));
+  return (
+    <table className="lp-log mono">
+      <tbody>
+        {rows.map(({ k, r }) => (
+          <tr key={k} className={k === n ? "new" : ""}>
+            <td>{r[0]}</td><td><i className={r[1] === 200 ? "ok" : "bad"}>{r[1]}</i></td><td>{r[2]}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 

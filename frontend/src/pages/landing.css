@@ -324,3 +324,6 @@ body:has(.lp) { background: #fafaf9; }
 .lp-log i { font-style: normal; font-weight: 500; padding: 1px 6px; border-radius: 4px; }
 .lp-log i.ok { color: #1a7a44; background: #eef8f1; }
 .lp-log i.bad { color: #c2410c; background: #fdf3ee; }
+.lp-log tr.new { animation: lp-row .45s ease-out; }
+@keyframes lp-row { from { opacity: 0; transform: translateY(-8px); background: #f3f6fe; } }
+@media (prefers-reduced-motion: reduce) { .lp-log tr.new { animation: none; } }
