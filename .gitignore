@@ -5,3 +5,6 @@ backend/bin/
 node_modules/
 frontend/dist/
 frontend/.env.local
+
+# TypeScript incremental build cache
+*.tsbuildinfo
