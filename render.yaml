@@ -1,0 +1,54 @@
+# Render Blueprint: deploys the Go backend from ./backend as a Docker web service (free plan).
+# Secrets marked `sync: false` are entered in the Render dashboard when you create the Blueprint.
+services:
+  - type: web
+    name: easewebhook-api
+    runtime: docker
+    plan: free
+    region: singapore # same AWS region as the Supabase database (ap-southeast-1)
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /.well-known/health
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: easewebhook
+      - key: HTTP_PORT
+        value: "10000"
+      - key: LOG_LEVEL
+        value: INFO
+      # Supabase Postgres via the IPv4 session pooler
+      - key: DB_DIALECT
+        value: postgres
+      - key: DB_HOST
+        value: aws-1-ap-southeast-1.pooler.supabase.com
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USER
+        value: postgres.prcbkeoilawbarjhgfoq
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: postgres
+      - key: DB_SSL_MODE
+        value: require
+      - key: DB_MAX_OPEN_CONNECTION
+        value: "5"
+      - key: DB_MAX_IDLE_CONNECTION
+        value: "2"
+      # Public URL of this service + /e, shown as each source's URL.
+      # Update it if Render assigns a different hostname than easewebhook-api.onrender.com.
+      - key: PUBLIC_INGEST_BASE_URL
+        value: https://easewebhook-api.onrender.com/e
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        value: 624904373513-s4r7hlqf396051t6op93qr8cgbt73s6h.apps.googleusercontent.com
+      - key: WORKER_CONCURRENCY
+        value: "10"
+      - key: WORKER_POLL_INTERVAL_MS
+        value: "500"
+      - key: DELIVERY_TIMEOUT_SECONDS
+        value: "30"
+      - key: GOFR_TELEMETRY
+        value: "false"

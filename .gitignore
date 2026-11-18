@@ -1,0 +1,7 @@
+backend/configs/.env
+backend/bin/
+*.log
+.DS_Store
+node_modules/
+frontend/dist/
+frontend/.env.local
