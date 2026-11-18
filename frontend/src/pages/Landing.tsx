@@ -139,11 +139,11 @@ export function LandingPage() {
                 <div className="lp-vline" />
                 <ul className="lp-dlist">
                   {[
-                    ["slack", "hooks.slack.com/T0…", "HMAC"],
-                    ["zendesk", "acme.zendesk.com/hooks", "Bearer"],
-                    ["github", "api.github.com/dispatch", "API key"],
-                    ["twilio", "api.twilio.com/events", "Basic"],
-                    ["razorpay", "api.razorpay.com/in", "HMAC"],
+                    ["shopify", "shop.myshopify.com/hooks", "HMAC"],
+                    ["stripe", "api.stripe.com/v1/events", "Bearer"],
+                    ["razorpay", "api.razorpay.com/orders", "Basic"],
+                    ["hubspot", "api.hubspot.com/crm/deals", "API key"],
+                    ["quickbooks", "quickbooks.intuit.com/in", "HMAC"],
                   ].map(([l, u, a], i) => (
                     <li key={u} className={i === 0 ? "sel" : ""}>
                       <span className="tile"><img src={`/brands/${l}.svg`} alt="" width="14" height="14" /></span>{u}<b className="mono">{a}</b>
@@ -380,9 +380,9 @@ function GatewayDiagram() {
 }
 
 const LOG_SCRIPT: [string, number, string][] = [
-  ["slack.com", 200, "84ms"], ["zendesk.com", 503, "retry in 10s"], ["github.com", 200, "61ms"],
-  ["twilio.com", 200, "97ms"], ["zendesk.com", 200, "112ms"], ["slack.com", 200, "73ms"],
-  ["github.com", 429, "retry in 30s"], ["github.com", 200, "58ms"],
+  ["shopify.com", 200, "84ms"], ["stripe.com", 503, "retry in 10s"], ["hubspot.com", 200, "61ms"],
+  ["paypal.com", 200, "97ms"], ["stripe.com", 200, "112ms"], ["shopify.com", 200, "73ms"],
+  ["hubspot.com", 429, "retry in 30s"], ["hubspot.com", 200, "58ms"],
 ];
 
 // Delivery log that keeps filling, newest on top, like the dashboard's events view.
@@ -409,10 +409,10 @@ function DeliveryLog() {
 }
 
 const ENDPOINTS = [
-  { y: 36, name: "slack.com", logo: "slack" },
-  { y: 105, name: "zendesk.com", logo: "zendesk" },
-  { y: 175, name: "github.com", logo: "github" },
-  { y: 244, name: "twilio.com", logo: "twilio" },
+  { y: 36, name: "shopify.com", logo: "shopify" },
+  { y: 105, name: "stripe.com", logo: "stripe" },
+  { y: 175, name: "hubspot.com", logo: "hubspot" },
+  { y: 244, name: "paypal.com", logo: "paypal" },
 ];
 
 function SendDiagram() {
