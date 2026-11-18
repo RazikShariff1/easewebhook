@@ -23,7 +23,6 @@ export function LandingPage() {
             <a href="#how">How it works</a>
             <a href="#features">Features</a>
             <a href="#delivery">Reliability</a>
-            <a href="#open-source">Open source</a>
           </nav>
           <div className="lp-nav-cta">
             {!user && <Link to="/login" className="lp-btn">Sign in</Link>}
