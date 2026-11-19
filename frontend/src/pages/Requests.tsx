@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   Check,
@@ -21,7 +21,9 @@ import { useQuery } from "../lib/hooks";
 import { fmtDate, nextRange, requestStatusLabel, tryParseJSON, type RangeKey } from "../lib/format";
 import { useWorkspace } from "../lib/workspace";
 import { PageHeader } from "../components/Layout";
-import { Badge, CopyText, Dropdown, ErrorBox, HttpBadge, Loading, StatusBadge, useAction, useToast } from "../components/ui";
+import { Badge, CopyText, Dropdown, ErrorBox, Loading, useAction, useToast } from "../components/ui";
+import { RequestFlow } from "../components/RequestFlow";
+import { RequestsEmpty } from "../components/RequestsEmpty";
 import { Histogram, RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
 import { useZoomRange } from "../lib/brush";
 import { REQUEST_SERIES } from "../components/StatusBarChart";
@@ -136,6 +138,8 @@ export function RequestsPage({ preset = "all" }: { preset?: Preset }) {
   const srcById = useMemo(() => new Map(sources.data?.models.map((s) => [s.id, s])), [sources.data]);
   const rows = list.data?.models ?? [];
   const total = hist.data?.buckets.reduce((a, b) => a + b.total, 0);
+  const filtered = !!(sourceIds || statuses.length || causes.length || methods.length || search || filter.body);
+  const isEmpty = !!list.data && rows.length === 0 && !filtered && pager.page === 1;
 
   const suggestions = useMemo(() => {
     const freq = new Map<string, number>();
@@ -292,6 +296,8 @@ export function RequestsPage({ preset = "all" }: { preset?: Preset }) {
           <ErrorBox error={list.error} />
           {list.loading && !list.data ? (
             <Loading />
+          ) : isEmpty ? (
+            <RequestsEmpty sourceUrl={sources.data?.models[0]?.url} />
           ) : (
             <table className="table req-table">
               <thead>
@@ -413,6 +419,7 @@ function RequestPanel({ id, onClose, onRetry }: { id: string; onClose: () => voi
   const req = useQuery(() => api.get<WebhookRequest>(`/requests/${id}`), [id], 5000);
   const events = useQuery(() => api.get<Page<WebhookEvent>>(`/requests/${id}/events`), [id], 4000);
   const conns = useQuery(() => api.get<Page<Connection>>("/connections", { limit: 250 }), []);
+  const source = useQuery(() => (req.data?.source_id ? api.get<Source>(`/sources/${req.data.source_id}`) : Promise.resolve(undefined)), [req.data?.source_id]);
   const [tab, setTab] = useState<"body" | "headers">("body");
   const r = req.data;
 
@@ -456,23 +463,8 @@ function RequestPanel({ id, onClose, onRetry }: { id: string; onClose: () => voi
             </div>
           </div>
           <div>
-            <div className="section-title">
-              Events ({r.events_count}){r.ignored_count > 0 && ` · ${r.ignored_count} ignored by filters`}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {events.data?.models.map((e) => (
-                <Link key={e.id} to={`/events?request_id=${r.id}`} className="attempt">
-                  <div className="attempt-row">
-                    <StatusBadge status={e.status} />
-                    <HttpBadge code={e.response_status} />
-                    <span className="mono truncate">{conns.data?.models.find((c) => c.id === e.connection_id)?.full_name ?? e.connection_id}</span>
-                    <span style={{ flex: 1 }} />
-                    <span className="mono faint">{e.id}</span>
-                  </div>
-                </Link>
-              ))}
-              {events.data?.models.length === 0 && <span className="faint">No events were created for this request.</span>}
-            </div>
+            <div className="section-title">Flow</div>
+            <RequestFlow request={r} source={source.data} events={events.data?.models ?? []} connections={conns.data?.models ?? []} />
           </div>
         </div>
       )}

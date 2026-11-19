@@ -14,6 +14,7 @@ import { useQuery } from "../lib/hooks";
 import { fmtDate, pretty, timeAgo, tryParseJSON, type RangeKey } from "../lib/format";
 import { PageHeader } from "../components/Layout";
 import { CopyText, Dropdown, Empty, ErrorBox, HttpBadge, Loading, StatusBadge, useAction, useToast } from "../components/ui";
+import { EventFlow } from "../components/RequestFlow";
 import { Histogram, RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
 import { useZoomRange } from "../lib/brush";
 import { Pager, usePager } from "./Sources";
@@ -385,6 +386,10 @@ function EventPanel({ id, conn, onClose, onChanged }: { id: string; conn?: Conne
         <Loading />
       ) : (
         <div className="panel-body">
+          <div>
+            <div className="section-title">Flow</div>
+            <EventFlow event={e} connection={conn} />
+          </div>
           <dl className="kv">
             <dt>Status</dt>
             <dd><StatusBadge status={e.status} /></dd>

@@ -4,7 +4,8 @@ import { ArrowUpDown, ChevronLeft, ChevronRight, ListFilter, MoreHorizontal, Pen
 import { api, type Connection, type Page, type Source, type Stats } from "../lib/api";
 import { useQuery } from "../lib/hooks";
 import { PageHeader } from "../components/Layout";
-import { Badge, CopyText, Dropdown, Empty, ErrorBox, Loading, NoData, Select, useAction } from "../components/ui";
+import { EntityEmpty } from "../components/EntityEmpty";
+import { Badge, CopyText, Dropdown, ErrorBox, Loading, NoData, Select, useAction } from "../components/ui";
 import { SourceForm } from "../components/forms";
 import { SourceTypeIcon } from "../components/SourceIcon";
 
@@ -71,10 +72,10 @@ export function SourcesPage() {
         {list.loading && !list.data ? (
           <Loading />
         ) : rows.length === 0 ? (
-          <Empty title="No sources">
-            <p>A source is a unique URL you give to a webhook provider. Every request it receives is logged and routed to its connections.</p>
-            <button className="btn primary" onClick={() => setEditing("new")}><PlusCircle /> New source</button>
-          </Empty>
+          <EntityEmpty focus="source" title="Send HTTP requests to EaseWebhook">
+            <p>Sources represent services that send HTTP requests to EaseWebhook. Add a source to receive a URL that can be pasted into sender platforms, or used in code when making the HTTP request.</p>
+            <button className="btn primary" onClick={() => setEditing("new")}><PlusCircle /> Add a source</button>
+          </EntityEmpty>
         ) : (
           <table className="table">
             <thead>

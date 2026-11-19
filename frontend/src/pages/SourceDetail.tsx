@@ -6,6 +6,7 @@ import { useQuery } from "../lib/hooks";
 import { fmtDate, requestStatusLabel, type RangeKey } from "../lib/format";
 import { useSourceTypes } from "../lib/sourceTypes";
 import { Badge, CopyText, Empty, ErrorBox, Loading, useAction } from "../components/ui";
+import { ConnectionGraph } from "../components/ConnectionGraph";
 import { SourceForm } from "../components/forms";
 import { SourceIcon } from "../components/SourceIcon";
 import { RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
@@ -62,6 +63,7 @@ export function SourceDetailPage() {
       </nav>
 
       <div className="content">
+        {tab === "overview" && <ConnectionGraph focus="source" entity={src} connections={conns.data?.models ?? []} />}
         {tab === "overview" && (
           <div className="dd-grid">
             <Details src={src} onEdit={() => setEditing(true)} />

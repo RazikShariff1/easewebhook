@@ -4,7 +4,8 @@ import { ArrowUpDown, GitFork, ListFilter, MoreHorizontal, Pencil, PlusCircle, P
 import { api, type Connection, type Destination, type Page, type Stats } from "../lib/api";
 import { useQuery } from "../lib/hooks";
 import { PageHeader } from "../components/Layout";
-import { Badge, Dropdown, Empty, ErrorBox, Loading, NoData, Select, useAction } from "../components/ui";
+import { EntityEmpty } from "../components/EntityEmpty";
+import { Badge, Dropdown, ErrorBox, Loading, NoData, Select, useAction } from "../components/ui";
 import { DestinationForm } from "../components/forms";
 import { DestinationIcon } from "../components/DestinationIcon";
 import { Pager, usePager } from "./Sources";
@@ -52,10 +53,10 @@ export function DestinationsPage() {
         {list.loading && !list.data ? (
           <Loading />
         ) : rows.length === 0 ? (
-          <Empty title="No destinations">
-            <p>A destination is the HTTP endpoint events are delivered to.</p>
-            <button className="btn primary" onClick={() => setEditing("new")}><PlusCircle /> New destination</button>
-          </Empty>
+          <EntityEmpty focus="destination" title="Deliver events to your endpoint">
+            <p>A destination is the HTTP endpoint events are delivered to. Connect it to one or more sources and EaseWebhook retries until it succeeds.</p>
+            <button className="btn primary" onClick={() => setEditing("new")}><PlusCircle /> Add a destination</button>
+          </EntityEmpty>
         ) : (
           <table className="table">
             <thead>

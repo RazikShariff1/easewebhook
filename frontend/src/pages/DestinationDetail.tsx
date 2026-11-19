@@ -5,6 +5,7 @@ import { api, type Connection, type Destination, type HistogramBucket, type Page
 import { useQuery } from "../lib/hooks";
 import { fmtDate, timeAgo, type RangeKey } from "../lib/format";
 import { Badge, CopyText, Empty, ErrorBox, HttpBadge, Loading, useAction } from "../components/ui";
+import { ConnectionGraph } from "../components/ConnectionGraph";
 import { DestinationForm } from "../components/forms";
 import { RangePicker, rangeBounds, ZoomOut } from "../components/Timeline";
 import { useZoomRange } from "../lib/brush";
@@ -64,6 +65,7 @@ export function DestinationDetailPage() {
       </nav>
 
       <div className="content">
+        {tab === "overview" && <ConnectionGraph focus="destination" entity={dest} connections={conns.data?.models ?? []} />}
         {tab === "overview" && (
           <div className="dd-grid">
             <DetailsPanel dest={dest} onEdit={() => setEditing(true)} />

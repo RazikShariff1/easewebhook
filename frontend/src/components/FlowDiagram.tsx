@@ -1,4 +1,4 @@
-import { Globe, Link2, SquareTerminal } from "lucide-react";
+import { Globe, SquareTerminal } from "lucide-react";
 
 export interface FlowNode {
   label: string;
@@ -8,6 +8,18 @@ export interface FlowNode {
 
 function clip(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
+const SECOND = "M 326 172 Q 340 172 340 190 L 340 236 Q 340 252 358 252 L 380 252";
+
+function Comet({ d, delay }: { d: string; delay: number }) {
+  const style = { animationDelay: `${delay}s` };
+  return (
+    <>
+      <path d={d} className="flow-comet tail" pathLength={100} style={style} />
+      <path d={d} className="flow-comet head" pathLength={100} style={style} />
+    </>
+  );
 }
 
 const isLocal = (url?: string) => !!url && /\/\/(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(url);
@@ -56,15 +68,18 @@ export function FlowDiagram({
       )}
 
       {/* wires */}
-      <line className="flow-wire" x1="180" y1="172" x2="244" y2="172" />
-      <line className="flow-pulse" x1="196" y1="172" x2="226" y2="172" />
-      <line className="flow-wire" x1="300" y1="172" x2="380" y2="172" />
-      <line className="flow-pulse" x1="338" y1="172" x2="376" y2="172" />
-      {two && <path className="flow-wire" d="M 318 172 Q 334 172 334 190 L 334 236 Q 334 252 352 252 L 380 252" />}
+      <path className="flow-wire" d="M 180 172 L 236 172" />
+      <path className="flow-wire" d="M 308 172 L 380 172" />
+      {two && <path className="flow-wire" d={SECOND} />}
+
+      {/* request comets: blue trail + bright head. In (0s), then out to each live destination (1s of a 4s loop) */}
+      <Comet d="M 180 172 L 236 172" delay={0} />
+      <Comet d="M 308 172 L 380 172" delay={1} />
+      {two && <Comet d={SECOND} delay={1.25} />}
 
       {/* rules over the hub */}
       {rules.length > 0 && (
-        <text className="flow-rules" x="272" y="128" textAnchor="middle">{clip(rules.join(" · "), 34)}</text>
+        <text className="flow-rules" x="272" y="116" textAnchor="middle">{clip(rules.join(" · "), 34)}</text>
       )}
 
       {/* source */}
@@ -82,9 +97,9 @@ export function FlowDiagram({
       </g>
 
       {/* hub */}
-      <g className="flow-hub">
-        <rect x="244" y="144" width="56" height="56" rx="9" />
-        <Link2 x={258} y={158} width={28} height={28} strokeWidth={2.4} />
+      <g className="flow-hub flow-hub-pulse">
+        <rect x="236" y="136" width="72" height="72" rx="14" />
+        <image href="/logo-icon.png" x="240" y="140" width="64" height="64" />
       </g>
 
       {/* destinations */}
@@ -92,7 +107,7 @@ export function FlowDiagram({
         const y = i === 0 ? 150 : 230;
         const Icon = d.kind === "local" ? SquareTerminal : Globe;
         return (
-          <g key={i} className={d.placeholder ? "flow-node placeholder" : "flow-node"}>
+          <g key={i} className={d.placeholder ? "flow-node placeholder" : "flow-node flow-arrive"} style={{ animationDelay: `${1.7 + i * 0.25}s` }}>
             <rect x="380" y={y} width="150" height="44" rx="22" />
             <Icon x={398} y={y + 14} width={16} height={16} className="flow-icon" />
             <text className="flow-dest" x="422" y={y + 27}>{clip(d.label.toUpperCase(), 11)}</text>
