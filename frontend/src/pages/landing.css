@@ -72,12 +72,19 @@ body:has(.lp) { background: #fafaf9; }
 .lp-fake-btn { margin: 0 16px; display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; border: 1px solid var(--l-line); border-radius: 6px; background: #fff; font-size: 14px; }
 
 /* Guaranteed delivery frame */
-.lp-ddiag .dflow { fill: none; stroke-width: 2.5; stroke-dasharray: 14 86; stroke-dashoffset: 100; opacity: 0; animation: lp-dflow 4.2s linear infinite; }
-.lp-ddiag .dflow.in { stroke: #1f4fd8; animation-delay: 0s; }
-.lp-ddiag .dflow.store { stroke: #8a8a86; }
-.lp-ddiag .dflow.bad { stroke: #e0703f; }
-.lp-ddiag .dflow.ok { stroke: #1f9d55; }
-@keyframes lp-dflow { 0% { stroke-dashoffset: 100; opacity: 1; } 16% { stroke-dashoffset: 0; opacity: 1; } 17%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+/* same trail + head and easing as the diagrams above; one 5s loop: in, then each outcome fans out in turn */
+.lp-ddiag .dflow { fill: none; stroke-width: 2.5; stroke-linecap: butt; opacity: 0; will-change: stroke-dashoffset; animation: lp-drun 5s cubic-bezier(.4,0,.3,1) infinite; }
+.lp-ddiag .dflow.tail { stroke-dasharray: 36 300; stroke-dashoffset: 36; }
+.lp-ddiag .dflow.head { stroke-dasharray: 9 300; stroke-dashoffset: 9; animation-name: lp-drun-h; }
+.lp-ddiag .dflow.in { animation-delay: 0s; }
+.lp-ddiag .dflow.tail.in, .lp-ddiag .dflow.tail.store { stroke: #c3d0f5; }
+.lp-ddiag .dflow.head.in, .lp-ddiag .dflow.head.store { stroke: #1f4fd8; }
+.lp-ddiag .dflow.tail.bad { stroke: #f6cdb8; }
+.lp-ddiag .dflow.head.bad { stroke: #e0703f; }
+.lp-ddiag .dflow.tail.ok { stroke: #bfe5cd; }
+.lp-ddiag .dflow.head.ok { stroke: #1f9d55; }
+@keyframes lp-drun { 0% { stroke-dashoffset: 36; opacity: 1; } 20% { stroke-dashoffset: -100; opacity: 1; } 20.1%, 100% { stroke-dashoffset: -100; opacity: 0; } }
+@keyframes lp-drun-h { 0% { stroke-dashoffset: 9; opacity: 1; } 20% { stroke-dashoffset: -127; opacity: 1; } 20.1%, 100% { stroke-dashoffset: -127; opacity: 0; } }
 .lp-ddiag .pt.sm { font-size: 12.5px; }
 .lp-ddiag .dout.bad .led { fill: #e0703f; }
 .lp-ddiag .dout.ok .led { fill: #1f9d55; }

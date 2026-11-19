@@ -263,11 +263,13 @@ function DeliveryDiagram() {
   return (
     <svg className="lp-diagram lp-ddiag" viewBox="0 0 760 290" role="img" aria-label="An incoming event is stored, fails twice with 503 and 504, and is delivered on the third attempt">
       <path d="M200 145 L 328 145" className="flow" />
-      <path d="M200 145 L 328 145" className="dflow in" pathLength={100} />
+      <path d="M200 145 L 328 145" className="dflow tail in" pathLength={100} />
+      <path d="M200 145 L 328 145" className="dflow head in" pathLength={100} />
       {OUT.map((o, i) => (
         <g key={o.y}>
           <path d={outPath(o.y)} className="flow" />
-          <path d={outPath(o.y)} className={`dflow ${o.tone}`} pathLength={100} style={{ animationDelay: `${0.6 + i * 0.7}s` }} />
+          <path d={outPath(o.y)} className={`dflow tail ${o.tone}`} pathLength={100} style={{ animationDelay: `${1 + i * 0.55}s` }} />
+          <path d={outPath(o.y)} className={`dflow head ${o.tone}`} pathLength={100} style={{ animationDelay: `${1 + i * 0.55}s` }} />
         </g>
       ))}
       <g>
