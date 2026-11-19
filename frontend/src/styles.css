@@ -868,7 +868,7 @@ main.main { display: flex; flex-direction: column; min-width: 0; overflow: hidde
 .tf-pill rect { fill: #111; stroke: var(--border-strong); stroke-width: 1.5; }
 .tf-brand { font: 600 12.5px var(--sans); fill: var(--text); }
 .tf-dest { height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font: 500 12px var(--mono); letter-spacing: .8px; color: var(--text); }
-.tf-card rect { fill: #14224d; stroke: #4f74e8; stroke-width: 1.5; animation: tf-card 2s ease-out infinite; animation-delay: .78s; }
+.tf-card rect { fill: #14224d; stroke: #4f74e8; stroke-width: 1.5; animation: tf-card 2s ease-out infinite; animation-delay: .9s; }
 @keyframes tf-card { 0% { stroke: #a9c1ff; filter: drop-shadow(0 0 10px rgba(91,140,255,.55)); } 55%, 100% { stroke: #4f74e8; filter: none; } }
 .tf-card line { stroke: #4f74e8; stroke-width: 1.5; }
 .tf-card-head { height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font: 500 13px var(--mono); letter-spacing: 1px; color: #8fb0ff; }
@@ -964,25 +964,10 @@ main.main { display: flex; flex-direction: column; min-width: 0; overflow: hidde
 .gf-more { text-align: center; font-size: 12px; color: var(--text-faint); margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) { .gf-dflow { animation: none; opacity: 0; } }
 
-/* ---------- requests: empty-state flow (same trail + head motion as the landing page's hub diagram) ---------- */
-.rq { width: 100%; max-width: 520px; height: auto; justify-self: center; overflow: visible; }
-.rq-wire { fill: none; stroke: var(--border-strong); stroke-width: 2; }
-.rq-pulse { fill: none; stroke-width: 2.5; stroke-linecap: butt; opacity: 0; will-change: stroke-dashoffset; }
-.rq-pulse.tail { stroke-dasharray: 36 300; stroke-dashoffset: 36; animation: rq-run-t 1s cubic-bezier(.4,0,.3,1) forwards; }
-.rq-pulse.head { stroke-dasharray: 9 300; stroke-dashoffset: 9; animation: rq-run-h 1s cubic-bezier(.4,0,.3,1) forwards; }
-.rq-pulse.tail.in { stroke: #2a3b78; } .rq-pulse.head.in { stroke: #5b8cff; }
-.rq-pulse.tail.ok { stroke: #1d5a37; } .rq-pulse.head.ok { stroke: #3ecf6e; }
-@keyframes rq-run-t { from { stroke-dashoffset: 36; opacity: 1; } to { stroke-dashoffset: -100; opacity: 1; } }
-@keyframes rq-run-h { from { stroke-dashoffset: 9; opacity: 1; } to { stroke-dashoffset: -127; opacity: 1; } }
-.rq-pill rect { fill: #111; stroke: var(--border-strong); stroke-width: 1.5; }
-.rq-brand { font: 700 15px var(--sans); fill: var(--text); letter-spacing: -.3px; }
-.rq-dest { font: 500 12px var(--mono); fill: var(--text); letter-spacing: 1px; }
-.rq-ico { color: var(--text-muted); }
-.rq-hub { fill: #14224d; stroke: #4f74e8; stroke-width: 1.5; }
+/* ---------- requests: empty-state "send a request" box ---------- */
 .rq-send { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--bg); font-size: 12.5px; min-width: 0; }
 .rq-send .copy { min-width: 0; display: inline-flex; align-items: center; gap: 8px; }
 .rq-method { color: #3ecf6e; font-weight: 600; }
-@media (prefers-reduced-motion: reduce) { .rq-pulse { display: none; } }
 
 
 /* hero empty states: swirl backdrop */
@@ -990,25 +975,6 @@ main.main { display: flex; flex-direction: column; min-width: 0; overflow: hidde
 
 .flow-hub rect { fill: transparent; stroke-width: 1.5; }
 
-/* ---------- sources / destinations empty-state flow ---------- */
-.ef { width: 100%; max-width: 440px; height: auto; display: block; margin: 0 auto; overflow: visible; justify-self: center; }
-.ef-label { fill: var(--text-muted); font: 500 11px var(--mono); letter-spacing: 1px; }
-.ef-wire { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
-.ef-pill rect { fill: var(--bg); stroke: var(--border-strong); stroke-width: 1.2; }
-.ef-pill.dim { opacity: .5; }
-.ef-pill.dim rect { stroke-dasharray: 4 3; }
-.ef-src { fill: var(--text); font: 600 14px var(--sans); }
-.ef-dest { fill: var(--text); font: 500 11.5px var(--mono); letter-spacing: .8px; }
-.ef-ico { color: var(--text-muted); }
-.ef-hub rect { fill: transparent; stroke: var(--border-strong); stroke-width: 1.5; animation: flow-hub 2s ease-out infinite; animation-delay: .75s; }
-.ef-comet { fill: none; stroke-width: 3; stroke-linecap: round; opacity: 0; animation: ef-run 6s cubic-bezier(.45,0,.25,1) infinite; }
-.ef-comet.tail { stroke: #3b5bdb; stroke-dasharray: 34 300; stroke-dashoffset: 34; filter: drop-shadow(0 0 4px rgba(91,140,255,.55)); }
-.ef-comet.head { stroke: #a9c1ff; stroke-dasharray: 8 300; stroke-dashoffset: 8; animation-name: ef-run-h; }
-@keyframes ef-run { 0% { stroke-dashoffset: 34; opacity: 1; } 13% { stroke-dashoffset: -100; opacity: 1; } 13.1%, 100% { stroke-dashoffset: -100; opacity: 0; } }
-@keyframes ef-run-h { 0% { stroke-dashoffset: 8; opacity: 1; } 13% { stroke-dashoffset: -126; opacity: 1; } 13.1%, 100% { stroke-dashoffset: -126; opacity: 0; } }
-.ef-arrive rect { animation: ef-arrive 6s ease-out infinite; animation-delay: inherit; }
-@keyframes ef-arrive { 0% { stroke: #5b8cff; } 12%, 100% { stroke: var(--border-strong); } }
-@media (prefers-reduced-motion: reduce) { .ef-comet, .ef-hub rect, .ef-arrive rect { animation: none; } }
 
 /* ---------- transformation run flow (editor) ---------- */
 .trf { display: flex; align-items: center; gap: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); }
@@ -1065,3 +1031,83 @@ main.main { display: flex; flex-direction: column; min-width: 0; overflow: hidde
 .splitter.h::after { left: 0; right: 0; top: -4px; bottom: -4px; }
 .splitter:hover::before, .splitter:focus-visible::before, .splitter.on::before { background: rgba(91, 140, 255, .75); }
 .editor-grid.dragging { user-select: none; }
+
+/* ---------- empty-state illustrations: sources / destinations / requests (each its own picture) ---------- */
+.ill { width: 100%; max-width: 480px; height: auto; display: block; margin: 0 auto; overflow: visible; justify-self: center; }
+.ill-label { fill: var(--text-muted); font: 500 11px var(--mono); letter-spacing: 1px; }
+.ill-wire { fill: none; stroke: var(--border-strong); stroke-width: 1.5; }
+.ill-pill rect { fill: var(--bg); stroke: var(--border-strong); stroke-width: 1.2; }
+.ill-src { fill: var(--text); font: 600 13.5px var(--sans); }
+.ill-comet { fill: none; stroke-width: 3; stroke-linecap: round; opacity: 0; }
+.ill-comet.tail { stroke: #3b5bdb; stroke-dasharray: 34 300; stroke-dashoffset: 34; filter: drop-shadow(0 0 4px rgba(91,140,255,.55)); }
+.ill-comet.head { stroke: #a9c1ff; stroke-dasharray: 8 300; stroke-dashoffset: 8; }
+.sf .ill-comet { animation: sf-run 6s cubic-bezier(.45,0,.25,1) infinite; }
+.sf .ill-comet.head { animation-name: sf-run-h; }
+@keyframes sf-run { 0% { stroke-dashoffset: 34; opacity: 1; } 13% { stroke-dashoffset: -100; opacity: 1; } 13.1%, 100% { stroke-dashoffset: -100; opacity: 0; } }
+@keyframes sf-run-h { 0% { stroke-dashoffset: 8; opacity: 1; } 13% { stroke-dashoffset: -126; opacity: 1; } 13.1%, 100% { stroke-dashoffset: -126; opacity: 0; } }
+.df .ill-comet { animation: df-run 9s cubic-bezier(.45,0,.25,1) infinite; }
+.df .ill-comet.head { animation-name: df-run-h; }
+@keyframes df-run { 0% { stroke-dashoffset: 34; opacity: 1; } 9% { stroke-dashoffset: -100; opacity: 1; } 9.1%, 100% { stroke-dashoffset: -100; opacity: 0; } }
+@keyframes df-run-h { 0% { stroke-dashoffset: 8; opacity: 1; } 9% { stroke-dashoffset: -126; opacity: 1; } 9.1%, 100% { stroke-dashoffset: -126; opacity: 0; } }
+
+/* sources: the URL card */
+.sf-box { fill: var(--bg); stroke: var(--border-strong); stroke-width: 1.5; animation: sf-flash 1.5s ease-out infinite; animation-delay: .78s; }
+@keyframes sf-flash { 0% { stroke: #a9c1ff; filter: drop-shadow(0 0 10px rgba(91,140,255,.45)); } 55%, 100% { stroke: var(--border-strong); filter: none; } }
+.sf-card { height: 100%; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+.sf-top { display: flex; align-items: center; gap: 8px; font: 500 11px var(--mono); letter-spacing: 1px; color: #8fb0ff; }
+.sf-url { font: 12.5px var(--mono); color: var(--text); padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: 8px; background: rgba(255,255,255,.03); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-url .dim { color: var(--text-faint); }
+.sf-chips { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.sf-chips .post { font: 600 11px var(--mono); color: var(--success); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 5px; padding: 2px 7px; }
+.sf-chips .ok { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); }
+.sf-chips .ok svg { color: var(--success); }
+.sf-live { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.sf-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 0 rgba(62,207,110,.5); animation: ill-ping 1.6s ease-out infinite; }
+@keyframes ill-ping { 70%, 100% { box-shadow: 0 0 0 7px rgba(62,207,110,0); } }
+
+/* destinations: endpoint cards with delivery status */
+.df-hub rect { fill: transparent; stroke: var(--border-strong); stroke-width: 1.5; animation: sf-flash 1.5s ease-out infinite; }
+.df-box { fill: var(--bg); stroke: var(--border-strong); stroke-width: 1.2; }
+.df-card { height: 100%; padding: 0 16px; display: flex; align-items: center; gap: 12px; }
+.df-card .ico { width: 32px; height: 32px; border-radius: 9px; background: rgba(255,255,255,.06); color: var(--text-muted); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.df-card .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
+.df-card .txt b { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.df-card .txt small { font: 11.5px var(--mono); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.df-st { position: relative; width: 104px; height: 24px; flex: none; }
+.df-st span { position: absolute; inset: 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border-radius: 12px; font: 600 11.5px var(--mono); }
+.df-st .wait { color: var(--text-faint); border: 1px dashed var(--border-strong); font-weight: 400; }
+.df-st .ok { color: var(--success); background: #123222; border: 1px solid var(--success-border); opacity: 0; }
+.df-st .fail { color: var(--warn); background: #33280f; border: 1px solid var(--warn-border); opacity: 0; animation: df-fail1 9s linear infinite; }
+.df-st .fail svg { animation: spin 1s linear infinite; }
+.df-st .ok0 { animation: df-ok0 9s linear infinite; } .df-st .ok1 { animation: df-ok1 9s linear infinite; } .df-st .ok2 { animation: df-ok2 9s linear infinite; }
+@keyframes df-ok0 { 0%, 9% { opacity: 0; } 10%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+@keyframes df-fail1 { 0%, 25% { opacity: 0; } 26%, 58% { opacity: 1; } 59%, 100% { opacity: 0; } }
+@keyframes df-ok1 { 0%, 59% { opacity: 0; } 60%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+@keyframes df-ok2 { 0%, 42% { opacity: 0; } 43%, 94% { opacity: 1; } 96%, 100% { opacity: 0; } }
+
+/* requests: live log */
+.rqf { width: 100%; max-width: 480px; justify-self: center; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--bg); overflow: hidden; }
+.rqf-head { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13.5px; color: var(--text); }
+.rqf-cols, .rqf-row { display: grid; grid-template-columns: 1.5fr 1fr .9fr; align-items: center; gap: 8px; padding: 0 16px; }
+.rqf-cols { height: 30px; font: 500 10.5px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+.rqf-list { height: 220px; overflow: hidden; animation: rqf-shift .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes rqf-shift { from { transform: translateY(-44px); } to { transform: none; } }
+.rqf-row { height: 44px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.rqf-row.fresh { animation: rqf-fresh 1.6s ease-out; }
+@keyframes rqf-fresh { 0% { background: rgba(91,140,255,.22); } 100% { background: transparent; } }
+.rqf-row .req { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rqf-row .req b { color: var(--success); font-weight: 600; margin-right: 4px; }
+.rqf-row .src { display: inline-flex; align-items: center; gap: 7px; color: var(--text-muted); }
+.rqf-row .st { justify-self: start; font-size: 12px; padding: 2px 9px; border-radius: 10px; border: 1px solid; }
+.rqf-row .st.ok { color: var(--success); background: var(--success-bg); border-color: var(--success-border); }
+.rqf-row .st.bad { color: var(--danger); background: var(--danger-bg); border-color: var(--danger-border); }
+@media (prefers-reduced-motion: reduce) {
+  .ill-comet, .sf-box, .df-hub rect, .sf-live i, .rqf-list, .rqf-row.fresh, .df-st .fail svg { animation: none; }
+  .df-st .ok { animation: none; opacity: 1; } .df-st .fail { animation: none; opacity: 0; }
+}
+
+.tf-logo rect { fill: #0b0b0b; stroke: var(--border-strong); stroke-width: 1.5; animation: tf-card 2s ease-out infinite; animation-delay: .72s; }
+@media (prefers-reduced-motion: reduce) { .tf-logo rect { animation: none; } }
+.ill-fade { animation: ill-fade .45s ease-out; }
+@keyframes ill-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ill-fade { animation: none; } }

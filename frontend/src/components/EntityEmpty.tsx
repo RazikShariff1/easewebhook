@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { EntityFlow } from "./EntityFlow";
+import { DestinationsIllustration, SourcesIllustration } from "./EmptyIllustrations";
 
 /**
  * Hero empty state: copy + action on the left, the source → hub → destination illustration on the right.
@@ -12,7 +12,7 @@ export function EntityEmpty({ focus, title, children }: { focus: "source" | "des
         <h3>{title}</h3>
         {children}
       </div>
-      <EntityFlow focus={focus} />
+      {focus === "source" ? <SourcesIllustration /> : <DestinationsIllustration />}
     </div>
   );
 }
