@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "easewebhook": {
+      "command": "go",
+      "args": ["run", "./mcp"],
+      "env": {
+        "EASEWEBHOOK_API_URL": "${EASEWEBHOOK_API_URL:-https://easewebhook.onrender.com}",
+        "EASEWEBHOOK_TOKEN": "${EASEWEBHOOK_TOKEN}",
+        "EASEWEBHOOK_WORKSPACE_ID": "${EASEWEBHOOK_WORKSPACE_ID:-}"
+      }
+    }
+  }
+}
