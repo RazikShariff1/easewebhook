@@ -21,6 +21,7 @@ import { TransformationsPage, TransformationEditor } from "./pages/Transformatio
 import { RequestsPage } from "./pages/Requests";
 import { EventsPage } from "./pages/Events";
 import { MetricsPage } from "./pages/Metrics";
+import { AiAgentsPage } from "./pages/AiAgents";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -50,6 +51,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="events/failed" element={<EventsPage preset="failed" />} />
             <Route path="events/paused" element={<EventsPage preset="paused" />} />
             <Route path="metrics" element={<MetricsPage />} />
+            <Route path="ai-agents" element={<AiAgentsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/connections" replace />} />
           </Route>

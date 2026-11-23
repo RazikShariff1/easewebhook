@@ -38,6 +38,11 @@ function readToken(): string | null {
   }
 }
 
+/** The signed-in user's API token, e.g. for configuring the MCP server. */
+export function getToken(): string | null {
+  return readToken();
+}
+
 function writeToken(t: string | null) {
   try {
     if (t) localStorage.setItem(TOKEN_KEY, t);

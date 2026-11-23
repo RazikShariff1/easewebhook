@@ -1085,3 +1085,41 @@ main.main { display: flex; flex-direction: column; min-width: 0; overflow: hidde
 
 .tf-logo rect { fill: #0b0b0b; stroke: var(--border-strong); stroke-width: 1.5; animation: tf-card 2s ease-out infinite; animation-delay: .72s; }
 @media (prefers-reduced-motion: reduce) { .tf-logo rect { animation: none; } }
+
+/* ---------- AI agents (MCP) ---------- */
+.ai-agents p { margin: 0; line-height: 1.55; font-size: 13.5px; }
+.ai-agents code { font-family: var(--mono); font-size: 12.5px; }
+.ai-hero { flex-direction: row; gap: 16px; align-items: flex-start; }
+.ai-hero h2 { margin-bottom: 6px; }
+.ai-hero-icon {
+  flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--neutral-bg); border: 1px solid var(--border-strong);
+}
+.ai-hero-icon svg { width: 20px; height: 20px; }
+.ai-prompts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.ai-prompt {
+  font-size: 12.5px; color: var(--text-muted); padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--bg-elev);
+}
+.ai-step {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 8px; border-radius: 50%;
+  font-size: 11.5px; font-weight: 600; background: var(--primary); color: var(--primary-fg); vertical-align: 1px;
+}
+.ai-snippet { position: relative; }
+.ai-snippet .code { padding-right: 190px; min-height: 44px; }
+.ai-snippet-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; }
+.ai-warning {
+  display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.5; color: var(--warn);
+  background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 10px 12px;
+}
+.ai-warning svg { flex: none; width: 16px; height: 16px; margin-top: 1px; }
+.ai-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 12.5px; color: var(--text-muted); }
+.ai-legend .badge:not(:first-child) { margin-left: 10px; }
+.ai-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px 24px; }
+.ai-tool-group .section-title { margin-bottom: 6px; }
+.ai-tool { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 0; }
+.ai-tool code { color: var(--text); }
+@media (max-width: 640px) {
+  .ai-hero { flex-direction: column; }
+  .ai-snippet .code { padding-right: 12px; padding-top: 44px; }
+}

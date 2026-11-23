@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowDownToLine,
   BarChart3,
+  Bot,
   Crosshair,
   FileCode2,
   GitFork,
@@ -56,6 +57,9 @@ export function Layout() {
           <NavItem to="/events/failed" label="Failed" count={failed} />
           <NavItem to="/events/paused" label="Paused" count={held} />
         </div>
+
+        <div className="nav-section">Integrate</div>
+        <NavItem to="/ai-agents" icon={<Bot />} label="AI agents" />
 
         <div className="sidebar-footer">
           <div className="usage-card">
