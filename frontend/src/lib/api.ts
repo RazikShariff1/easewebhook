@@ -239,3 +239,24 @@ export const api = {
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body ?? {}),
   del: (path: string) => request<void>("DELETE", path),
 };
+
+/**
+ * Calls the hosted MCP endpoint (JSON-RPC over Streamable HTTP), the same way an AI app does.
+ * Uses the given API key, or the signed-in session in the current workspace.
+ */
+export async function mcpCall<T>(method: string, params: Record<string, unknown> = {}, apiKey?: string): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+    "Mcp-Protocol-Version": "2025-06-18",
+  };
+  if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+  else {
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+    if (workspaceId) headers["X-Workspace-Id"] = workspaceId;
+  }
+  const res = await fetch("/api/mcp", { method: "POST", headers, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || json.error) throw new ApiError(res.status, json.error?.message ?? `MCP endpoint returned ${res.status}`);
+  return json.result as T;
+}

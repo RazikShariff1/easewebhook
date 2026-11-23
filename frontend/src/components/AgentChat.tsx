@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, ShieldQuestion, Sparkles } from "lucide-react";
+import { ArrowUp, Check, ShieldQuestion, Sparkles } from "lucide-react";
 
 /**
  * An animated replay of a real AI-agent session using the EaseWebhook MCP server:
@@ -33,7 +33,7 @@ function reducedMotion() {
   }
 }
 
-export function AgentChat({ compact = false }: { compact?: boolean }) {
+export function AgentChat({ compact = false, composer = false, onTool }: { compact?: boolean; composer?: boolean; onTool?: (tool: string | null, used: string[]) => void }) {
   const [tick, setTick] = useState(() => (reducedMotion() ? T_END : 0));
 
   useEffect(() => {
@@ -43,6 +43,14 @@ export function AgentChat({ compact = false }: { compact?: boolean }) {
   }, []);
 
   const shownCalls = Math.max(0, Math.min(CALLS.length, tick - T_CALLS + 1));
+
+  // Tell the host page which tool the agent is running now, and which it has already used (for highlighting).
+  const current = tick >= T_ASK ? "retry_event" : tick >= T_CALLS + CALLS.length ? null : shownCalls > 0 ? CALLS[shownCalls - 1].tool : null;
+  const doneCount = tick < T_CALLS ? 0 : tick >= T_CALLS + CALLS.length ? CALLS.length : shownCalls - 1;
+  const usedKey = CALLS.slice(0, doneCount).map((c) => c.tool).join(",");
+  useEffect(() => {
+    onTool?.(current, usedKey ? usedKey.split(",") : []);
+  }, [current, usedKey, onTool]);
 
   return (
     <div className={`agent-chat ${compact ? "compact" : ""}`} aria-label="Example: an AI agent debugging failed webhooks with the EaseWebhook MCP server">
@@ -86,6 +94,12 @@ export function AgentChat({ compact = false }: { compact?: boolean }) {
           </div>
         )}
       </div>
+      {composer && (
+        <div className="ac-composer" aria-hidden="true">
+          <span>Ask about your webhooks…</span>
+          <i><ArrowUp size={14} strokeWidth={2.5} /></i>
+        </div>
+      )}
     </div>
   );
 }

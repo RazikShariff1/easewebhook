@@ -1,391 +1,252 @@
-import { useMemo, useState } from "react";
-import { ArrowRight, Copy, Eye, EyeOff, KeyRound, Laptop, Search, Server, ShieldAlert, Terminal } from "lucide-react";
-import { siClaude, siCursor, siGithub, type SimpleIcon } from "simple-icons";
-import { getToken } from "../lib/auth";
+import { Fragment, useState, type FormEvent } from "react";
+import { BookOpen, Check, ChevronRight, CircleAlert, Copy, KeyRound, Loader2, Plug, Plus, Trash2 } from "lucide-react";
+import { api, mcpCall } from "../lib/api";
+import { useQuery } from "../lib/hooks";
 import { useWorkspace } from "../lib/workspace";
 import { fmtDate } from "../lib/format";
+import { ALL_TOOLS, TOOLS, type Kind } from "../lib/mcpTools";
 import { PageHeader } from "../components/Layout";
-import { AgentChat } from "../components/AgentChat";
-import { Badge, useToast } from "../components/ui";
+import { Badge, CopyText, ErrorBox, Field, Loading, useAction, useToast } from "../components/ui";
 
-const REPO = "https://github.com/RazikShariff1/easewebhook";
-const PROD_API = "https://easewebhook.onrender.com";
+const PROD_MCP = "https://easewebhook.onrender.com/mcp";
+const DOCS = "https://github.com/RazikShariff1/easewebhook/tree/main/backend/internal/mcpserver";
 
-type Kind = "read" | "write" | "destructive";
-type Tool = { name: string; kind: Kind; does: string };
+interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  key?: string;
+}
 
-const TOOLS: { area: string; tools: Tool[] }[] = [
-  {
-    area: "Workspace",
-    tools: [
-      { name: "get_overview", kind: "read", does: "24h counts of requests, events and failures" },
-      { name: "list_workspaces", kind: "read", does: "Your workspaces, and which one is in use" },
-      { name: "use_workspace", kind: "write", does: "Switch workspace for the session" },
-    ],
-  },
-  {
-    area: "Sources",
-    tools: [
-      { name: "list_sources", kind: "read", does: "Webhook URLs and their settings" },
-      { name: "get_source", kind: "read", does: "One source, with its public URL" },
-      { name: "list_source_types", kind: "read", does: "Stripe, GitHub, Razorpay and 30 more" },
-      { name: "create_source", kind: "write", does: "New public URL for a sender" },
-      { name: "update_source", kind: "write", does: "Rename, config, verification" },
-      { name: "set_source_enabled", kind: "write", does: "Turn a source on or off" },
-      { name: "delete_source", kind: "destructive", does: "Remove a source and its URL" },
-    ],
-  },
-  {
-    area: "Destinations",
-    tools: [
-      { name: "list_destinations", kind: "read", does: "Where events are delivered" },
-      { name: "get_destination", kind: "read", does: "URL, auth type, rate limit" },
-      { name: "create_destination", kind: "write", does: "New endpoint to deliver to" },
-      { name: "update_destination", kind: "write", does: "Change URL, auth or rate limit" },
-      { name: "set_destination_enabled", kind: "write", does: "Hold or release deliveries" },
-      { name: "delete_destination", kind: "destructive", does: "Remove a destination" },
-    ],
-  },
-  {
-    area: "Connections",
-    tools: [
-      { name: "list_connections", kind: "read", does: "Source → destination routes and rules" },
-      { name: "get_connection", kind: "read", does: "One route with its rules" },
-      { name: "create_connection", kind: "write", does: "Route a source to a destination" },
-      { name: "update_connection", kind: "write", does: "Rename or replace rules" },
-      { name: "set_connection_state", kind: "write", does: "Pause, unpause, enable, disable" },
-      { name: "delete_connection", kind: "destructive", does: "Remove a route" },
-    ],
-  },
-  {
-    area: "Transformations",
-    tools: [
-      { name: "list_transformations", kind: "read", does: "JavaScript payload rewriters" },
-      { name: "get_transformation", kind: "read", does: "One transformation's code" },
-      { name: "test_transformation", kind: "read", does: "Dry-run code on a real event" },
-      { name: "create_transformation", kind: "write", does: "Save new transformation code" },
-      { name: "update_transformation", kind: "write", does: "Change code or env" },
-      { name: "delete_transformation", kind: "destructive", does: "Remove a transformation" },
-    ],
-  },
-  {
-    area: "Requests",
-    tools: [
-      { name: "list_requests", kind: "read", does: "Every call received, accepted or rejected" },
-      { name: "get_request", kind: "read", does: "Headers, body and resulting events" },
-      { name: "retry_request", kind: "write", does: "Re-route a rejected request" },
-    ],
-  },
-  {
-    area: "Events",
-    tools: [
-      { name: "list_events", kind: "read", does: "Deliveries by status, destination, time" },
-      { name: "get_event", kind: "read", does: "Payload plus every delivery attempt" },
-      { name: "get_attempt", kind: "read", does: "Full request sent and response received" },
-      { name: "retry_event", kind: "write", does: "Re-send one event now" },
-      { name: "bulk_retry_events", kind: "write", does: "Re-send all events matching a filter" },
-      { name: "cancel_event", kind: "destructive", does: "Stop a pending delivery" },
-      { name: "bulk_cancel_events", kind: "destructive", does: "Stop all matching pending deliveries" },
-    ],
-  },
-];
+const KIND: Record<Kind, { label: string; tone: "neutral" | "warn" | "danger" }> = {
+  read: { label: "read-only", tone: "neutral" },
+  write: { label: "write", tone: "warn" },
+  destructive: { label: "destructive", tone: "danger" },
+};
 
-const ALL_TOOLS = TOOLS.flatMap((g) => g.tools);
-const KIND_TONE: Record<Kind, "neutral" | "warn" | "danger"> = { read: "neutral", write: "warn", destructive: "danger" };
-const KIND_LABEL: Record<Kind, string> = { read: "read-only", write: "write", destructive: "destructive" };
+const CLIENTS = ["Claude Code", "Cursor", "VS Code", "Claude Desktop", "Other"] as const;
+type Client = (typeof CLIENTS)[number];
 
-const PROMPTS = [
-  "Why are my Stripe webhooks failing today?",
-  "Show rejected requests from the last hour and why they were rejected.",
-  "How many events failed for orders-service since 9am? Retry them after I confirm.",
-  "Connect a new GitHub source to https://api.example.com/hooks with 5 exponential retries.",
-  "Write a transformation that removes card details from Razorpay payloads, and test it on the last event.",
-];
-
-type ClientId = "claude-code" | "claude-desktop" | "cursor";
-const CLIENTS: { id: ClientId; name: string; icon: SimpleIcon | "terminal"; where: React.ReactNode }[] = [
-  {
-    id: "claude-code",
-    name: "Claude Code",
-    icon: "terminal",
-    where: <>Run this inside the <code>easewebhook/mcp</code> folder. The server is then available in every Claude Code session.</>,
-  },
-  {
-    id: "claude-desktop",
-    name: "Claude Desktop",
-    icon: siClaude,
-    where: <>Settings → Developer → Edit config opens <code>claude_desktop_config.json</code>. Paste this, replace the path, and restart Claude Desktop.</>,
-  },
-  {
-    id: "cursor",
-    name: "Cursor",
-    icon: siCursor,
-    where: <>Settings → MCP → Add new server opens <code>~/.cursor/mcp.json</code>. Paste this and replace the path.</>,
-  },
-];
-
-/** Reads the expiry from the token's payload (it's a JWT); null if it can't be read. */
-function tokenExpiry(token: string): Date | null {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload.exp === "number" ? new Date(payload.exp * 1000) : null;
-  } catch {
-    return null;
+function snippet(client: Client, url: string, key: string): { hint: string; text: string } {
+  const auth = `Bearer ${key}`;
+  const json = (v: unknown) => JSON.stringify(v, null, 2);
+  switch (client) {
+    case "Claude Code":
+      return { hint: "Run in a terminal.", text: `claude mcp add --transport http easewebhook ${url} \\\n  --header "Authorization: ${auth}"` };
+    case "Cursor":
+      return { hint: "Add to ~/.cursor/mcp.json.", text: json({ mcpServers: { easewebhook: { url, headers: { Authorization: auth } } } }) };
+    case "VS Code":
+      return { hint: "Add to .vscode/mcp.json, then use it from Copilot Chat in agent mode.", text: json({ servers: { easewebhook: { type: "http", url, headers: { Authorization: auth } } } }) };
+    case "Claude Desktop":
+      return {
+        hint: "Settings → Developer → Edit config. Uses the mcp-remote bridge (needs Node.js), then restart Claude Desktop.",
+        text: json({ mcpServers: { easewebhook: { command: "npx", args: ["-y", "mcp-remote", url, "--header", `Authorization: ${auth}`] } } }),
+      };
+    default:
+      return { hint: "Any client that supports MCP over Streamable HTTP.", text: `URL     ${url}\nHeader  Authorization: ${auth}` };
   }
 }
 
 export function AiAgentsPage() {
   const { current } = useWorkspace();
   const toast = useToast();
-  const [client, setClient] = useState<ClientId>("claude-code");
-  const [reveal, setReveal] = useState(false);
-  const [q, setQ] = useState("");
-  const [kind, setKind] = useState<Kind | "all">("all");
+  const { run, busy } = useAction();
+  const [name, setName] = useState("");
+  const [fresh, setFresh] = useState<ApiKey | null>(null);
+  const [client, setClient] = useState<Client>("Claude Code");
+  const [open, setOpen] = useState<string | null>(null);
+  const [test, setTest] = useState<{ state: "idle" | "busy" | "ok" | "fail"; text?: string }>({ state: "idle" });
 
-  const token = getToken() ?? "";
-  const expires = useMemo(() => tokenExpiry(token), [token]);
-  const daysLeft = expires ? Math.max(0, Math.ceil((expires.getTime() - Date.now()) / 86_400_000)) : null;
+  const keys = useQuery(() => api.get<ApiKey[]>("/api-keys"), [current.id]);
   const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-  const apiUrl = local ? "http://localhost:8000" : PROD_API;
-  const masked = token ? `${token.slice(0, 8)}••••••••••••${token.slice(-4)}` : "<your token>";
+  const url = local ? "http://localhost:8000/mcp" : PROD_MCP;
+  const s = snippet(client, url, fresh?.key ?? "<your API key>");
 
-  const config = (t: string, forClient: ClientId = client) => {
-    const vars: [string, string][] = [
-      ["EASEWEBHOOK_TOKEN", t],
-      ["EASEWEBHOOK_WORKSPACE_ID", current.id],
-      ...(apiUrl !== PROD_API ? ([["EASEWEBHOOK_API_URL", apiUrl]] as [string, string][]) : []),
-    ];
-    if (forClient === "claude-code") {
-      return ["claude mcp add easewebhook \\", ...vars.map(([k, v]) => `  -e ${k}=${v} \\`), '  -- "$PWD/bin/easewebhook-mcp"'].join("\n");
+  const copy = (text: string) =>
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => toast("Copied to clipboard"))
+      .catch(() => toast("Your browser blocked copying; select the text instead", "error"));
+
+  const create = async (e: FormEvent) => {
+    e.preventDefault();
+    const k = await run(() => api.post<ApiKey>("/api-keys", { name: name.trim() || "API key" }), "API key created");
+    if (k) {
+      setFresh(k);
+      setName("");
+      keys.reload();
     }
-    return JSON.stringify(
-      { mcpServers: { easewebhook: { command: "/path/to/easewebhook/mcp/bin/easewebhook-mcp", env: Object.fromEntries(vars) } } },
-      null,
-      2,
-    );
   };
 
-  const copy = (text: string, what: string) => navigator.clipboard?.writeText(text).then(() => toast(`${what} copied`));
+  // Calls tools/list on the MCP endpoint exactly like an AI app would, with the new key if there is one.
+  const testConnection = async () => {
+    setTest({ state: "busy" });
+    const t0 = performance.now();
+    try {
+      const r = await mcpCall<{ tools: unknown[] }>("tools/list", {}, fresh?.key);
+      const ms = Math.round(performance.now() - t0);
+      setTest({ state: "ok", text: `Connected${fresh ? " with your new key" : ""} · ${r.tools.length} tools available · ${ms} ms` });
+      if (fresh) keys.reload(); // the test just used the key: refresh "Last used"
+    } catch (e) {
+      setTest({ state: "fail", text: (e as Error).message });
+    }
+  };
 
-  const counts = useMemo(() => {
-    const c = { read: 0, write: 0, destructive: 0 };
-    ALL_TOOLS.forEach((t) => c[t.kind]++);
-    return c;
-  }, []);
-
-  const needle = q.trim().toLowerCase();
-  const groups = TOOLS.map((g) => ({
-    ...g,
-    tools: g.tools.filter(
-      (t) => (kind === "all" || t.kind === kind) && (!needle || t.name.includes(needle) || t.does.toLowerCase().includes(needle) || g.area.toLowerCase().includes(needle)),
-    ),
-  })).filter((g) => g.tools.length > 0);
-
-  const activeClient = CLIENTS.find((c) => c.id === client)!;
+  const revoke = async (k: ApiKey) => {
+    if (!confirm(`Revoke "${k.name}"? AI apps using it stop working right away.`)) return;
+    if (await run(() => api.del(`/api-keys/${k.id}`).then(() => true), "API key revoked")) {
+      if (fresh?.id === k.id) setFresh(null);
+      keys.reload();
+    }
+  };
 
   return (
     <>
-      <PageHeader title="AI agents" titleExtra={<Badge tone="neutral">MCP</Badge>}>
-        <a className="btn" href={`${REPO}/tree/main/mcp`} target="_blank" rel="noreferrer"><ClientIcon icon={siGithub} /> Source and docs</a>
+      <PageHeader title="AI agents">
+        <a className="btn" href={DOCS} target="_blank" rel="noreferrer"><BookOpen /> Docs</a>
       </PageHeader>
       <div className="content">
-        <div className="aa">
-          {/* Hero */}
-          <section className="aa-hero">
-            <div className="aa-hero-copy">
-              <div className="aa-eyebrow">MODEL CONTEXT PROTOCOL</div>
-              <h2>Ask AI about your webhooks</h2>
-              <p>
-                Connect Claude, Cursor or any MCP-compatible agent to <strong>{current.name}</strong>. It can find failed
-                deliveries and explain why they failed, set up sources and connections, write transformations, and retry
-                events after you approve.
-              </p>
-              <div className="aa-stats">
-                <div><strong>{ALL_TOOLS.length}</strong><span>tools</span></div>
-                <div><strong>{counts.read}</strong><span>read-only</span></div>
-                <div><strong>{counts.write}</strong><span>write</span></div>
-                <div><strong>{counts.destructive}</strong><span>destructive</span></div>
-              </div>
-              <div className="aa-cta">
-                <button className="btn primary" onClick={() => document.getElementById("aa-setup")?.scrollIntoView({ behavior: "smooth" })}>
-                  Set it up in 2 minutes <ArrowRight />
-                </button>
-                <button className="btn" onClick={() => copy(config(token, "claude-code"), "Claude Code command with your token")}>
-                  <Copy /> Copy Claude Code command
-                </button>
-              </div>
-              <div className="aa-works">
-                <span className="faint">Works with</span>
-                {CLIENTS.map((c) => (
-                  <span key={c.id} className="aa-chip"><ClientIcon icon={c.icon} />{c.name}</span>
-                ))}
-                <span className="aa-chip faint">any MCP client</span>
-              </div>
+        <div className="settings ai-page">
+          <section className="settings-card">
+            <h2>MCP server</h2>
+            <p className="muted settings-text">
+              Connect Claude, Cursor, VS Code or any MCP client to <strong>{current.name}</strong>. Agents can look up
+              requests and events, explain failed deliveries, and manage sources, connections and retries. Your AI app
+              asks you before anything that changes data.
+            </p>
+            <div className="settings-row">
+              <Field label="Server URL">
+                <div className="input mono-input"><CopyText text={url} /></div>
+              </Field>
+              <button className="btn" onClick={testConnection} disabled={test.state === "busy"}>
+                {test.state === "busy" ? <Loader2 className="spin" /> : <Plug />} Test connection
+              </button>
             </div>
-            <AgentChat />
-          </section>
-
-          {/* How it connects */}
-          <section className="aa-flow" aria-label="Your AI app starts the EaseWebhook MCP server on your computer, which calls the EaseWebhook API">
-            <FlowNode icon={<Laptop />} title="Your AI app" sub="Claude, Cursor…" />
-            <FlowLink label="stdio" />
-            <FlowNode icon={<Terminal />} title="easewebhook-mcp" sub="runs on your computer" accent />
-            <FlowLink label="HTTPS + your token" />
-            <FlowNode icon={<Server />} title="EaseWebhook API" sub={current.name} />
-          </section>
-
-          {/* Setup */}
-          <section className="aa-card" id="aa-setup">
-            <div className="aa-card-head">
-              <h3>Set it up</h3>
-              <span className="faint">About 2 minutes · needs Go 1.27+</span>
-            </div>
-            <ol className="aa-steps">
-              <li>
-                <div className="aa-step-title">Build the server</div>
-                <p className="muted">Your AI app starts it when a session begins and stops it when the session ends. Nothing runs in the background.</p>
-                <Snippet text={`git clone ${REPO}\ncd easewebhook/mcp\ngo build -o bin/easewebhook-mcp .`} onCopy={(t) => copy(t, "Commands")} />
-              </li>
-
-              <li>
-                <div className="aa-step-title">Connect your AI app</div>
-                <div className="aa-clients" role="tablist">
-                  {CLIENTS.map((c) => (
-                    <button key={c.id} role="tab" aria-selected={client === c.id} className={client === c.id ? "on" : ""} onClick={() => setClient(c.id)}>
-                      <ClientIcon icon={c.icon} />
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-                <p className="muted">{activeClient.where}</p>
-                <Snippet
-                  text={config(reveal ? token : masked)}
-                  onCopy={() => copy(config(token), "Config with your token")}
-                  copyLabel="Copy with token"
-                />
-                <div className="aa-token">
-                  <KeyRound />
-                  <code>{reveal ? token : masked}</code>
-                  <button className="btn sm ghost" onClick={() => setReveal((r) => !r)}>
-                    {reveal ? <EyeOff /> : <Eye />} {reveal ? "Hide" : "Show"}
-                  </button>
-                  <button className="btn sm ghost" onClick={() => copy(token, "Token")}><Copy /> Token</button>
-                  {daysLeft !== null && (
-                    <Badge tone={daysLeft <= 1 ? "danger" : daysLeft <= 2 ? "warn" : "neutral"}>
-                      {daysLeft === 0 ? "expired" : `expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`}
-                    </Badge>
-                  )}
-                </div>
-                <div className="aa-warning">
-                  <ShieldAlert />
-                  <span>
-                    This is your personal login token: anyone who has it can act as you. Don't commit or share it.
-                    {expires && <> It stops working on {fmtDate(expires.toISOString())}; come back here for a fresh config.</>}
-                  </span>
-                </div>
-              </li>
-
-              <li>
-                <div className="aa-step-title">Ask away</div>
-                <p className="muted">Start a new chat. The agent chooses the tools itself. Click a prompt to copy it.</p>
-                <div className="aa-prompts">
-                  {PROMPTS.map((p) => (
-                    <button key={p} className="aa-prompt" onClick={() => copy(p, "Prompt")}>
-                      <span>{p}</span>
-                      <ArrowRight />
-                    </button>
-                  ))}
-                </div>
-              </li>
-            </ol>
-          </section>
-
-          {/* Tools */}
-          <section className="aa-card">
-            <div className="aa-card-head">
-              <h3>Tools</h3>
-              <span className="faint">Each tool is marked by risk, so your AI app can ask you before anything that changes or deletes data.</span>
-            </div>
-            <div className="aa-tool-bar">
-              <label className="aa-search">
-                <Search />
-                <input placeholder="Search tools…" value={q} onChange={(e) => setQ(e.target.value)} />
-              </label>
-              <div className="btn-group">
-                {(["all", "read", "write", "destructive"] as const).map((k) => (
-                  <button key={k} className={`btn sm ${kind === k ? "aa-on" : ""}`} onClick={() => setKind(k)}>
-                    {k === "all" ? `All ${ALL_TOOLS.length}` : `${KIND_LABEL[k]} ${counts[k]}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {groups.length === 0 ? (
-              <div className="muted aa-none">No tools match “{q}”.</div>
-            ) : (
-              <div className="aa-tools">
-                {groups.map((g) => (
-                  <div key={g.area} className="aa-tool-group">
-                    <div className="section-title">{g.area}</div>
-                    {g.tools.map((t) => (
-                      <div key={t.name} className="aa-tool">
-                        <div>
-                          <code>{t.name}</code>
-                          <div className="faint">{t.does}</div>
-                        </div>
-                        <Badge tone={KIND_TONE[t.kind]}>{KIND_LABEL[t.kind]}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                ))}
+            {(test.state === "ok" || test.state === "fail") && (
+              <div className={`mcp-test ${test.state}`}>
+                {test.state === "ok" ? <Check /> : <CircleAlert />}
+                {test.text}
               </div>
             )}
-            <div className="faint aa-foot">
-              Safety built in: bulk retry and cancel refuse to run without a filter, results are capped at 60 KB, and
-              workspace members and source key rotation aren't exposed to agents.
+          </section>
+
+          <section className="settings-card">
+            <h2>API keys</h2>
+            <form onSubmit={create} className="settings-row">
+              <Field label="New key" hint={`Works only in ${current.name}. It can't manage members or other keys.`}>
+                <input className="input" placeholder="e.g. Claude Code on my laptop" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+              </Field>
+              <button className="btn primary" type="submit" disabled={busy}><Plus /> Create key</button>
+            </form>
+
+            {fresh?.key && (
+              <div className="new-key">
+                <div><Check /> Copy this key now. It won't be shown again.</div>
+                <div className="new-key-row">
+                  <code>{fresh.key}</code>
+                  <button className="btn sm" onClick={() => copy(fresh.key!)}><Copy /> Copy</button>
+                </div>
+              </div>
+            )}
+
+            <ErrorBox error={keys.error} />
+            {!keys.data ? (
+              <Loading />
+            ) : keys.data.length === 0 ? (
+              <div className="faint" style={{ fontSize: 13 }}>No keys yet.</div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th className="hide-sm">Key</th>
+                    <th className="hide-sm">Created</th>
+                    <th>Last used</th>
+                    <th style={{ width: 48 }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {keys.data.map((k) => (
+                    <tr key={k.id}>
+                      <td><KeyRound size={13} className="faint" style={{ verticalAlign: -2, marginRight: 8 }} />{k.name}</td>
+                      <td className="mono faint hide-sm">{k.prefix}…</td>
+                      <td className="muted nowrap hide-sm">{fmtDate(k.created_at)}</td>
+                      <td className="muted nowrap">{k.last_used_at ? fmtDate(k.last_used_at) : "Never"}</td>
+                      <td>
+                        <button className="btn icon ghost" title="Revoke" aria-label={`Revoke ${k.name}`} onClick={() => revoke(k)} disabled={busy}>
+                          <Trash2 />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="settings-card">
+            <h2>Connect your AI app</h2>
+            <div className="tabs">
+              {CLIENTS.map((c) => (
+                <button key={c} className={client === c ? "on" : ""} onClick={() => setClient(c)}>{c}</button>
+              ))}
+            </div>
+            <div className="muted" style={{ fontSize: 13 }}>
+              {s.hint} {!fresh && "Create a key above and it's filled in here."}
+            </div>
+            <div className="snippet">
+              <pre className="code">{s.text}</pre>
+              <button className="btn sm" onClick={() => copy(s.text)}><Copy /> Copy</button>
+            </div>
+          </section>
+
+          <section className="settings-card">
+            <h2>Tools <span className="count-pill">{ALL_TOOLS.length}</span></h2>
+            <table className="table tool-table">
+              <tbody>
+                {TOOLS.map((g) => {
+                  const expanded = open === g.area;
+                  const n = (k: Kind) => g.tools.filter((t) => t.kind === k).length;
+                  return (
+                    <Fragment key={g.area}>
+                      <tr className="clickable tool-area" onClick={() => setOpen(expanded ? null : g.area)} aria-expanded={expanded}>
+                        <td>
+                          <span className="tool-area-name">
+                            <ChevronRight className={`chev ${expanded ? "open" : ""}`} />
+                            {g.area}
+                            <span className="faint">· {g.tools.length}</span>
+                          </span>
+                        </td>
+                        <td className="tool-kinds">
+                          {(["read", "write", "destructive"] as const).map((k) =>
+                            n(k) ? <Badge key={k} tone={KIND[k].tone}>{n(k)} {KIND[k].label}</Badge> : null,
+                          )}
+                        </td>
+                      </tr>
+                      {expanded &&
+                        g.tools.map((t) => (
+                          <tr key={t.name} className="tool-row">
+                            <td>
+                              <div className="mono">{t.name}</div>
+                              <div className="faint">{t.does}</div>
+                            </td>
+                            <td className="tool-kinds"><Badge tone={KIND[t.kind].tone}>{KIND[t.kind].label}</Badge></td>
+                          </tr>
+                        ))}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div className="faint" style={{ fontSize: 12 }}>
+              Every call runs with your permissions in this workspace. Bulk retry and cancel need a filter.{" "}
+              <a href={DOCS} target="_blank" rel="noreferrer">Docs</a>
             </div>
           </section>
         </div>
       </div>
     </>
-  );
-}
-
-function ClientIcon({ icon }: { icon: SimpleIcon | "terminal" }) {
-  if (icon === "terminal") return <Terminal className="aa-ci" />;
-  return (
-    <svg className="aa-ci" viewBox="0 0 24 24" aria-hidden="true">
-      {/* near-black brand colours (GitHub, Cursor) would vanish on the dark theme: use the text colour */}
-      <path d={icon.path} fill={parseInt(icon.hex, 16) < 0x404040 ? "currentColor" : `#${icon.hex}`} />
-    </svg>
-  );
-}
-
-function FlowNode({ icon, title, sub, accent }: { icon: React.ReactNode; title: string; sub: string; accent?: boolean }) {
-  return (
-    <div className={`aa-node ${accent ? "accent" : ""}`}>
-      <span className="aa-node-icon">{icon}</span>
-      <div>
-        <div className="aa-node-title">{title}</div>
-        <div className="faint aa-node-sub">{sub}</div>
-      </div>
-    </div>
-  );
-}
-
-function FlowLink({ label }: { label: string }) {
-  return (
-    <div className="aa-link">
-      <span>{label}</span>
-      <i />
-    </div>
-  );
-}
-
-function Snippet({ text, onCopy, copyLabel = "Copy" }: { text: string; onCopy: (text: string) => void; copyLabel?: string }) {
-  return (
-    <div className="aa-snippet">
-      <pre className="code">{text}</pre>
-      <button className="btn sm" onClick={() => onCopy(text)}><Copy /> {copyLabel}</button>
-    </div>
   );
 }

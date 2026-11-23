@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowLeft, RotateCw, Link2, Search, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck, MessageSquareText, Plug } from "lucide-react";
+import { ArrowRight, ArrowLeft, RotateCw, Link2, Search, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, ChevronRight, Code2, Telescope, Bot, ShieldCheck, Copy } from "lucide-react";
 import { siClaude, siCursor, type SimpleIcon } from "simple-icons";
 import { AgentChat } from "../components/AgentChat";
+import { ALL_TOOLS, type Kind } from "../lib/mcpTools";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
 import { COUNTRY_CENTRE, countryName } from "../lib/countries";
@@ -1007,89 +1008,167 @@ function ProductionSection() {
   );
 }
 
-const MCP_DOCS = "https://github.com/RazikShariff1/easewebhook/tree/main/mcp";
+const MCP_DOCS = "https://github.com/RazikShariff1/easewebhook/tree/main/backend/internal/mcpserver";
+const MCP_URL = "https://easewebhook.onrender.com/mcp";
 
-const TRACE: [string, string][] = [
-  ["get_overview", "2 events FAILED"],
-  ["list_events", "status FAILED · 2"],
-  ["get_event", "401 missing session"],
-  ["get_attempt", "response body"],
+const TOOL_BY_NAME = Object.fromEntries(ALL_TOOLS.map((t) => [t.name, t]));
+
+// Tools shown in the list. The first five are the ones the demo chat runs, in order.
+const LISTED = [
+  "get_overview", "list_connections", "list_events", "get_event", "retry_event",
+  "create_source", "update_destination", "cancel_event", "delete_source",
 ];
 
-const AGENT_APPS: { name: string; icon: SimpleIcon | null }[] = [
-  { name: "Claude Code", icon: null },
-  { name: "Claude Desktop", icon: siClaude },
-  { name: "Cursor", icon: siCursor },
+const DOING: Record<string, string> = {
+  get_overview: "Checking the workspace overview",
+  list_connections: "Finding the Razorpay route",
+  list_events: "Listing the failed events",
+  get_event: "Inspecting the failing delivery",
+  retry_event: "Waiting for your approval to retry",
+};
+
+const KIND_LABEL: Record<Kind, string> = { read: "READ", write: "WRITE", destructive: "DESTRUCTIVE" };
+
+type AgentClient = { id: string; name: string; icon: SimpleIcon | null; text: string };
+
+const AGENT_CLIENTS: AgentClient[] = [
+  {
+    id: "claude-code",
+    name: "Claude Code",
+    icon: null,
+    text: `claude mcp add --transport http easewebhook \\\n  ${MCP_URL} \\\n  --header "Authorization: Bearer <your API key>"`,
+  },
+  {
+    id: "cursor",
+    name: "Cursor",
+    icon: siCursor,
+    text: `{\n  "mcpServers": {\n    "easewebhook": {\n      "url": "${MCP_URL}",\n      "headers": { "Authorization": "Bearer <your API key>" }\n    }\n  }\n}`,
+  },
+  {
+    id: "claude-desktop",
+    name: "Claude Desktop",
+    icon: siClaude,
+    text: `{\n  "mcpServers": {\n    "easewebhook": {\n      "command": "npx",\n      "args": ["-y", "mcp-remote", "${MCP_URL}",\n        "--header", "Authorization: Bearer <your API key>"]\n    }\n  }\n}`,
+  },
 ];
 
 function AgentsSection({ user }: { user: boolean }) {
+  const [client, setClient] = useState(AGENT_CLIENTS[0].id);
+  const [copied, setCopied] = useState(false);
+  const [live, setLive] = useState<{ tool: string | null; used: string[] }>({ tool: null, used: [] });
+  const onTool = useCallback((tool: string | null, used: string[]) => setLive({ tool, used }), []);
+  const active = AGENT_CLIENTS.find((c) => c.id === client)!;
+
+  const copy = () => {
+    navigator.clipboard?.writeText(active.text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    });
+  };
+
   return (
     <section id="agents" className="lp-wrap">
       <div className="lp-frame agents">
-        <div className="lp-frame-top">
-          <div className="lp-frame-copy">
-            <h2>AI Agents</h2>
-            <div className="lp-eyebrow blue">MCP SERVER · NEW</div>
-            <p>
-              Ask Claude or Cursor why a webhook failed and get the answer from your real data. The EaseWebhook MCP
-              server gives AI agents 38 tools to inspect, fix and replay your webhooks, and they ask before changing anything.
-            </p>
-            <div className="lp-actions left">
-              <Link to={user ? "/ai-agents" : "/signup"} className="lp-btn primary">{user ? "Connect an agent" : "Start for free"}</Link>
-              <a href={MCP_DOCS} className="lp-btn" target="_blank" rel="noreferrer">View on GitHub</a>
-            </div>
+        <div className="ag-head">
+          <div className="lp-eyebrow blue">MCP SERVER · NEW</div>
+          <h2>Give your AI agent the keys, not the whole house</h2>
+          <p>
+            Connect Claude, Cursor or any MCP client to EaseWebhook. It debugs failed deliveries from your real data
+            and fixes them, and anything that changes something waits for your approval.
+          </p>
+          <div className="lp-actions">
+            <Link to={user ? "/ai-agents" : "/signup"} className="lp-btn primary">{user ? "Connect an agent" : "Start for free"}</Link>
+            <a href={MCP_DOCS} className="lp-btn" target="_blank" rel="noreferrer">View on GitHub</a>
           </div>
-          <AgentChat />
         </div>
 
-        <div className="lp-cells">
-          <Cell icon={<MessageSquareText />} title="Debug in one question">
-            <div className="lp-card pad lp-trace">
-              <div className="lp-trace-q">“Why are my Razorpay webhooks failing?”</div>
-              <ul className="mono">
-                {TRACE.map(([t, r]) => (
-                  <li key={t}><span className="ok"><Check size={10} strokeWidth={3} /></span>{t}<em>{r}</em></li>
-                ))}
-              </ul>
-              <div className="lp-status mono ok"><i />ROOT CAUSE FOUND · 4 TOOL CALLS</div>
-            </div>
-          </Cell>
-          <Cell icon={<ShieldCheck />} title="Asks before it acts">
-            <div className="lp-card pad lp-risk">
-              {[
-                ["READ-ONLY", "17", "runs freely", "r"],
-                ["WRITE", "15", "asks you first", "w"],
-                ["DESTRUCTIVE", "6", "asks you first", "d"],
-              ].map(([k, n, note, c]) => (
-                <div key={k} className={`row ${c}`}>
-                  <b className="mono">{k}</b>
-                  <strong className="mono">{n}</strong>
-                  <span>{note}</span>
-                </div>
-              ))}
-              <div className="lp-risk-note">Bulk actions always need a filter.</div>
-            </div>
-          </Cell>
-          <Cell icon={<Plug />} title="Works with your AI app">
-            <div className="lp-card pad lp-apps">
-              <div className="lp-apps-grid">
-                {AGENT_APPS.map((a) => (
-                  <div key={a.name} className="lp-app">
-                    {a.icon ? (
-                      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={a.icon.path} fill={a.icon.hex === "000000" ? "currentColor" : `#${a.icon.hex}`} /></svg>
-                    ) : (
-                      <Code2 size={18} />
-                    )}
-                    {a.name}
-                  </div>
-                ))}
-                <div className="lp-app faint">+ any MCP client</div>
+        <div className="ag-stage">
+          <AgentChat composer onTool={onTool} />
+
+          <aside className="ag-tiers" aria-label="Available tools">
+            <div className="ag-tiers-top">
+              <div className="ag-count">
+                <strong className="mono">{ALL_TOOLS.length}</strong>
+                <span>tools</span>
               </div>
-              <pre className="lp-code mono">{`claude mcp add easewebhook \\
-  -e EASEWEBHOOK_TOKEN=… \\
-  -- ./bin/easewebhook-mcp`}</pre>
+              <p>Everything your agent can call</p>
             </div>
-          </Cell>
+
+            <div className="ag-todo" role="list">
+              {LISTED.map((name) => {
+                const tool = TOOL_BY_NAME[name];
+                const running = live.tool === name;
+                const done = !running && live.used.includes(name);
+                const ask = running && tool.kind !== "read";
+                return (
+                  <div key={name} role="listitem" className={`ag-step ${running ? "run" : done ? "done" : "wait"} ${ask ? "ask" : ""}`}>
+                    <span className="ag-mark">
+                      {ask ? <ShieldCheck size={15} /> : running ? <i className="ag-spin" /> : done ? <Check size={11} strokeWidth={3} /> : null}
+                    </span>
+                    <span className="ag-name">
+                      <code className="mono">{name}</code>
+                      <span className="ag-does">{tool.does}</span>
+                    </span>
+                    {ask ? (
+                      <small className="ag-kind mono write">NEEDS APPROVAL</small>
+                    ) : (
+                      <small className={`ag-kind mono ${tool.kind}`}>{KIND_LABEL[tool.kind]}</small>
+                    )}
+                  </div>
+                );
+              })}
+              <div className="ag-step more"><span className="ag-mark" /><span className="ag-name"><code className="mono">+{ALL_TOOLS.length - LISTED.length} more tools</code></span></div>
+            </div>
+
+            {(() => {
+              const state = live.tool ? "run" : live.used.length >= 4 ? "done" : "idle";
+              return (
+                <div className={`ag-now ${state}`} key={live.tool ?? state}>
+                  {state === "done" ? (
+                    <span className="ag-done"><Check size={12} strokeWidth={3} /></span>
+                  ) : (
+                    <span className="ag-dots" aria-hidden="true"><i /><i /><i /><i /></span>
+                  )}
+                  <span>{live.tool ? DOING[live.tool] : state === "done" ? "Root cause found: 401 missing session" : "Waiting for your question"}</span>
+                  <ChevronRight size={14} />
+                </div>
+              );
+            })()}
+          </aside>
+        </div>
+
+        <div className="ag-install">
+          <div className="ag-install-copy">
+            <h3>Connect in a minute</h3>
+            <p>Create an API key in your dashboard, then paste one command or config block into your AI app.</p>
+            <ol>
+              <li><span className="mono">1</span>Create an API key</li>
+              <li><span className="mono">2</span>Add the server to your AI app</li>
+              <li><span className="mono">3</span>Ask it about your webhooks</li>
+            </ol>
+          </div>
+          <div className="ag-term">
+            <div className="ag-tabs" role="tablist">
+              {AGENT_CLIENTS.map((c) => (
+                <button key={c.id} role="tab" aria-selected={c.id === client} className={c.id === client ? "on" : ""} onClick={() => setClient(c.id)}>
+                  {c.icon ? (
+                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d={c.icon.path} fill={c.icon.hex === "000000" ? "currentColor" : `#${c.icon.hex}`} /></svg>
+                  ) : (
+                    <Code2 size={14} />
+                  )}
+                  {c.name}
+                </button>
+              ))}
+              <button className="copy" onClick={copy} aria-label="Copy snippet">
+                {copied ? <><Check size={13} strokeWidth={3} /> Copied</> : <><Copy size={13} /> Copy</>}
+              </button>
+            </div>
+            <div className="ag-term-body">
+              {AGENT_CLIENTS.map((c) => (
+                <pre key={c.id} className={`mono ${c.id === client ? "on" : ""}`} aria-hidden={c.id !== client}>{c.text}</pre>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
