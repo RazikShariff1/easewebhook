@@ -38,9 +38,6 @@ Claude Desktop only starts local programs from its config, so bridge with `mcp-r
 { "mcpServers": { "easewebhook": { "command": "npx", "args": ["-y", "mcp-remote", "https://easewebhook.onrender.com/mcp", "--header", "Authorization: Bearer ewak_..."] } } }
 ```
 
-The repo's `.mcp.json` registers it for Claude Code sessions in this repo; set `EASEWEBHOOK_API_KEY`
-in your shell (and `EASEWEBHOOK_MCP_URL` to point at a local backend).
-
 ## How it works
 
 - The backend serves `/mcp` itself (`http.go`), statelessly: every request is authenticated by its
