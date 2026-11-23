@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowLeft, RotateCw, Link2, Search, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck } from "lucide-react";
+import { ArrowRight, ArrowLeft, RotateCw, Link2, Search, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, Code2, Telescope, Bot, ShieldCheck, MessageSquareText, Plug } from "lucide-react";
+import { siClaude, siCursor, type SimpleIcon } from "simple-icons";
+import { AgentChat } from "../components/AgentChat";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
 import { COUNTRY_CENTRE, countryName } from "../lib/countries";
@@ -232,6 +234,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <AgentsSection user={!!user} />
 
       <section className="lp-wrap">
         <div className="lp-cta">
@@ -997,6 +1001,95 @@ function ProductionSection() {
               <span className="mono">DISTINCT WEBHOOK SOURCES</span>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const MCP_DOCS = "https://github.com/RazikShariff1/easewebhook/tree/main/mcp";
+
+const TRACE: [string, string][] = [
+  ["get_overview", "2 events FAILED"],
+  ["list_events", "status FAILED · 2"],
+  ["get_event", "401 missing session"],
+  ["get_attempt", "response body"],
+];
+
+const AGENT_APPS: { name: string; icon: SimpleIcon | null }[] = [
+  { name: "Claude Code", icon: null },
+  { name: "Claude Desktop", icon: siClaude },
+  { name: "Cursor", icon: siCursor },
+];
+
+function AgentsSection({ user }: { user: boolean }) {
+  return (
+    <section id="agents" className="lp-wrap">
+      <div className="lp-frame agents">
+        <div className="lp-frame-top">
+          <div className="lp-frame-copy">
+            <h2>AI Agents</h2>
+            <div className="lp-eyebrow blue">MCP SERVER · NEW</div>
+            <p>
+              Ask Claude or Cursor why a webhook failed and get the answer from your real data. The EaseWebhook MCP
+              server gives AI agents 38 tools to inspect, fix and replay your webhooks, and they ask before changing anything.
+            </p>
+            <div className="lp-actions left">
+              <Link to={user ? "/ai-agents" : "/signup"} className="lp-btn primary">{user ? "Connect an agent" : "Start for free"}</Link>
+              <a href={MCP_DOCS} className="lp-btn" target="_blank" rel="noreferrer">View on GitHub</a>
+            </div>
+          </div>
+          <AgentChat />
+        </div>
+
+        <div className="lp-cells">
+          <Cell icon={<MessageSquareText />} title="Debug in one question">
+            <div className="lp-card pad lp-trace">
+              <div className="lp-trace-q">“Why are my Razorpay webhooks failing?”</div>
+              <ul className="mono">
+                {TRACE.map(([t, r]) => (
+                  <li key={t}><span className="ok"><Check size={10} strokeWidth={3} /></span>{t}<em>{r}</em></li>
+                ))}
+              </ul>
+              <div className="lp-status mono ok"><i />ROOT CAUSE FOUND · 4 TOOL CALLS</div>
+            </div>
+          </Cell>
+          <Cell icon={<ShieldCheck />} title="Asks before it acts">
+            <div className="lp-card pad lp-risk">
+              {[
+                ["READ-ONLY", "17", "runs freely", "r"],
+                ["WRITE", "15", "asks you first", "w"],
+                ["DESTRUCTIVE", "6", "asks you first", "d"],
+              ].map(([k, n, note, c]) => (
+                <div key={k} className={`row ${c}`}>
+                  <b className="mono">{k}</b>
+                  <strong className="mono">{n}</strong>
+                  <span>{note}</span>
+                </div>
+              ))}
+              <div className="lp-risk-note">Bulk actions always need a filter.</div>
+            </div>
+          </Cell>
+          <Cell icon={<Plug />} title="Works with your AI app">
+            <div className="lp-card pad lp-apps">
+              <div className="lp-apps-grid">
+                {AGENT_APPS.map((a) => (
+                  <div key={a.name} className="lp-app">
+                    {a.icon ? (
+                      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={a.icon.path} fill={a.icon.hex === "000000" ? "currentColor" : `#${a.icon.hex}`} /></svg>
+                    ) : (
+                      <Code2 size={18} />
+                    )}
+                    {a.name}
+                  </div>
+                ))}
+                <div className="lp-app faint">+ any MCP client</div>
+              </div>
+              <pre className="lp-code mono">{`claude mcp add easewebhook \\
+  -e EASEWEBHOOK_TOKEN=… \\
+  -- ./bin/easewebhook-mcp`}</pre>
+            </div>
+          </Cell>
         </div>
       </div>
     </section>

@@ -369,3 +369,49 @@ body:has(.lp) { background: #fafaf9; }
 .lp-browser .lp-log td { padding: 9px 12px; }
 .lp-dlist .tile { background: #fff; border: 1px solid var(--l-line); box-shadow: 0 1px 2px rgba(0,0,0,.06); width: 22px; height: 22px; }
 .lp-dlist .tile img { display: block; }
+
+/* ---------- AI Agents (MCP) section ---------- */
+.lp-frame.agents .lp-frame-top { align-items: center; }
+.lp-trace-q { font-size: 13px; padding: 8px 12px; border-radius: 12px 12px 3px 12px; background: #f1f1ef; margin-left: auto; width: fit-content; max-width: 100%; }
+.lp-trace ul { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 6px; }
+.lp-trace li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--l-line); border-radius: 8px; background: #fff; font-size: 12px; }
+.lp-trace li .ok { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #eef8f1; color: #1a7a44; flex: none; }
+.lp-trace li em { font-style: normal; margin-left: auto; color: var(--l-faint); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp-risk { display: flex; flex-direction: column; gap: 8px; }
+.lp-risk .row { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; border: 1px solid var(--l-line); border-radius: 8px; background: #fff; }
+.lp-risk .row b { font-size: 11px; letter-spacing: .08em; font-weight: 500; }
+.lp-risk .row strong { grid-row: span 2; align-self: center; font-size: 22px; font-weight: 500; }
+.lp-risk .row span { font-size: 13px; color: var(--l-muted); }
+.lp-risk .row.r b { color: #555; }
+.lp-risk .row.w b { color: #b45309; } .lp-risk .row.w { background: #fffbf3; border-color: #f3e2bf; }
+.lp-risk .row.d b { color: #b42318; } .lp-risk .row.d { background: #fff6f5; border-color: #f6d2cd; }
+.lp-risk-note { font-size: 12px; color: var(--l-faint); text-align: center; margin-top: 2px; }
+.lp-apps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.lp-app { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--l-line); border-radius: 8px; background: #fff; font-size: 13px; font-weight: 500; }
+.lp-app.faint { color: var(--l-faint); font-weight: 400; justify-content: center; border-style: dashed; background: transparent; }
+
+/* Agent chat demo, light theme for the landing page */
+.lp .agent-chat { border: 1px solid var(--l-line); border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05); font-size: 13.5px; }
+.lp .ac-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid var(--l-line); background: #fcfcfb; font-family: var(--mono); font-size: 11px; color: var(--l-faint); }
+.lp .ac-bar i { width: 9px; height: 9px; border-radius: 50%; background: #e2e2de; }
+.lp .ac-bar span { margin-left: 8px; }
+.lp .ac-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; min-height: 360px; }
+.lp .ac-msg { line-height: 1.5; animation: ac-in .3s ease-out; }
+.lp .ac-msg.user { align-self: flex-end; max-width: 88%; padding: 9px 13px; border-radius: 12px 12px 3px 12px; background: #151515; color: #fff; }
+.lp .ac-msg.agent { display: flex; gap: 8px; color: #333; }
+.lp .ac-msg.agent svg { flex: none; margin-top: 3px; color: #d97757; }
+.lp .ac-calls { display: flex; flex-direction: column; gap: 5px; }
+.lp .ac-call { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--l-line); border-radius: 7px; background: #fcfcfb; font-size: 12px; min-width: 0; animation: ac-in .25s ease-out; }
+.lp .ac-call code { font-family: var(--mono); font-size: 11.5px; color: #151515; }
+.lp .ac-args { font-family: var(--mono); font-size: 11px; color: var(--l-faint); white-space: nowrap; }
+.lp .ac-result { margin-left: auto; font-size: 11.5px; color: var(--l-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lp .ac-state { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; flex: none; }
+.lp .ac-call.done .ac-state { background: #eef8f1; color: #1a7a44; }
+.lp .ac-spin { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid #ddd; border-top-color: #151515; animation: lp-spin .8s linear infinite; }
+.lp .ac-approve { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid #f3e2bf; border-radius: 8px; background: #fffbf3; color: #92400e; font-size: 12.5px; animation: ac-in .3s ease-out; }
+.lp .ac-approve svg { flex: none; }
+.lp .ac-approve code { font-family: var(--mono); font-size: 11px; }
+.lp .ac-approve b { margin-left: auto; padding: 4px 11px; border-radius: 6px; background: #151515; color: #fff; font-weight: 500; }
+@keyframes ac-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .lp .ac-msg, .lp .ac-call, .lp .ac-approve { animation: none; } }
+@media (max-width: 860px) { .lp .ac-args { display: none; } }
