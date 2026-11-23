@@ -6,6 +6,9 @@ import { useWorkspace } from "../lib/workspace";
 import { fmtDate } from "../lib/format";
 import { ALL_TOOLS, TOOLS, type Kind } from "../lib/mcpTools";
 import { PageHeader } from "../components/Layout";
+import { WindowDots } from "../components/WindowDots";
+import { AgentClientPicker } from "../components/AgentClientPicker";
+import { AGENT_CLIENTS, clientById } from "../lib/agentClients";
 import { Badge, CopyText, ErrorBox, Field, Loading, useAction, useToast } from "../components/ui";
 
 const PROD_MCP = "https://easewebhook.onrender.com/mcp";
@@ -26,43 +29,21 @@ const KIND: Record<Kind, { label: string; tone: "neutral" | "warn" | "danger" }>
   destructive: { label: "destructive", tone: "danger" },
 };
 
-const CLIENTS = ["Claude Code", "Cursor", "VS Code", "Claude Desktop", "Other"] as const;
-type Client = (typeof CLIENTS)[number];
-
-function snippet(client: Client, url: string, key: string): { hint: string; text: string } {
-  const auth = `Bearer ${key}`;
-  const json = (v: unknown) => JSON.stringify(v, null, 2);
-  switch (client) {
-    case "Claude Code":
-      return { hint: "Run in a terminal.", text: `claude mcp add --transport http easewebhook ${url} \\\n  --header "Authorization: ${auth}"` };
-    case "Cursor":
-      return { hint: "Add to ~/.cursor/mcp.json.", text: json({ mcpServers: { easewebhook: { url, headers: { Authorization: auth } } } }) };
-    case "VS Code":
-      return { hint: "Add to .vscode/mcp.json, then use it from Copilot Chat in agent mode.", text: json({ servers: { easewebhook: { type: "http", url, headers: { Authorization: auth } } } }) };
-    case "Claude Desktop":
-      return {
-        hint: "Settings → Developer → Edit config. Uses the mcp-remote bridge (needs Node.js), then restart Claude Desktop.",
-        text: json({ mcpServers: { easewebhook: { command: "npx", args: ["-y", "mcp-remote", url, "--header", `Authorization: ${auth}`] } } }),
-      };
-    default:
-      return { hint: "Any client that supports MCP over Streamable HTTP.", text: `URL     ${url}\nHeader  Authorization: ${auth}` };
-  }
-}
-
 export function AiAgentsPage() {
   const { current } = useWorkspace();
   const toast = useToast();
   const { run, busy } = useAction();
   const [name, setName] = useState("");
   const [fresh, setFresh] = useState<ApiKey | null>(null);
-  const [client, setClient] = useState<Client>("Claude Code");
+  const [client, setClient] = useState(AGENT_CLIENTS[0].id);
   const [open, setOpen] = useState<string | null>(null);
   const [test, setTest] = useState<{ state: "idle" | "busy" | "ok" | "fail"; text?: string }>({ state: "idle" });
 
   const keys = useQuery(() => api.get<ApiKey[]>("/api-keys"), [current.id]);
   const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
   const url = local ? "http://localhost:8000/mcp" : PROD_MCP;
-  const s = snippet(client, url, fresh?.key ?? "<your API key>");
+  const agent = clientById(client);
+  const snippetText = agent.snippet(url, fresh?.key ?? "<your API key>");
 
   const copy = (text: string) =>
     navigator.clipboard
@@ -109,37 +90,29 @@ export function AiAgentsPage() {
       </PageHeader>
       <div className="content">
         <div className="settings ai-page">
-          <section className="settings-card">
-            <h2>MCP server</h2>
-            <p className="muted settings-text">
-              Connect Claude, Cursor, VS Code or any MCP client to <strong>{current.name}</strong>. Agents can look up
-              requests and events, explain failed deliveries, and manage sources, connections and retries. Your AI app
-              asks you before anything that changes data.
-            </p>
-            <div className="settings-row">
-              <Field label="Server URL">
-                <div className="input mono-input"><CopyText text={url} /></div>
-              </Field>
-              <button className="btn" onClick={testConnection} disabled={test.state === "busy"}>
-                {test.state === "busy" ? <Loader2 className="spin" /> : <Plug />} Test connection
-              </button>
+          <section className="ai-intro">
+            <div>
+              <h2>Let AI agents work in {current.name}</h2>
+              <p className="muted">
+                Connect Claude, Cursor, VS Code or any MCP client. Agents can look up requests and events, explain failed
+                deliveries, and manage sources, connections and retries. Your AI app asks you before anything that changes data.
+              </p>
             </div>
-            {(test.state === "ok" || test.state === "fail") && (
-              <div className={`mcp-test ${test.state}`}>
-                {test.state === "ok" ? <Check /> : <CircleAlert />}
-                {test.text}
-              </div>
-            )}
+            <div className="ai-intro-stats">
+              <div><strong>{ALL_TOOLS.length}</strong><span>tools</span></div>
+              <div><strong>{AGENT_CLIENTS.length - 1}+</strong><span>AI apps</span></div>
+            </div>
           </section>
-
           <section className="settings-card">
-            <h2>API keys</h2>
+            <h2><span className="step-num">1</span>Create an API key</h2>
+            <p className="muted settings-text">Each AI app gets its own key, so you can revoke one without breaking the others.</p>
             <form onSubmit={create} className="settings-row">
-              <Field label="New key" hint={`Works only in ${current.name}. It can't manage members or other keys.`}>
+              <Field label="New key">
                 <input className="input" placeholder="e.g. Claude Code on my laptop" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
               </Field>
               <button className="btn primary" type="submit" disabled={busy}><Plus /> Create key</button>
             </form>
+            <span className="hint key-hint">Works only in {current.name}. It can't manage members or other keys.</span>
 
             {fresh?.key && (
               <div className="new-key">
@@ -185,22 +158,44 @@ export function AiAgentsPage() {
               </table>
             )}
           </section>
-
           <section className="settings-card">
-            <h2>Connect your AI app</h2>
-            <div className="tabs">
-              {CLIENTS.map((c) => (
-                <button key={c} className={client === c ? "on" : ""} onClick={() => setClient(c)}>{c}</button>
-              ))}
-            </div>
-            <div className="muted" style={{ fontSize: 13 }}>
-              {s.hint} {!fresh && "Create a key above and it's filled in here."}
-            </div>
-            <div className="snippet">
-              <pre className="code">{s.text}</pre>
-              <button className="btn sm" onClick={() => copy(s.text)}><Copy /> Copy</button>
+            <h2><span className="step-num">2</span>Connect your AI app</h2>
+            <p className="muted settings-text">
+              {agent.hint}{" "}
+              {fresh?.key ? <span className="key-filled"><Check /> Your new key is filled in.</span> : "Create a key above and it's filled in here."}
+            </p>
+            <div className="agent-box">
+              <div className="agent-box-bar">
+                <WindowDots />
+                <AgentClientPicker value={client} onChange={setClient} />
+                <span className="agent-box-file mono">{agent.file}</span>
+                <button className="btn sm" onClick={() => copy(snippetText)}><Copy /> Copy</button>
+              </div>
+              <pre className="agent-box-code">{snippetText}</pre>
             </div>
           </section>
+          <section className="settings-card">
+            <h2><span className="step-num">3</span>Check the connection</h2>
+            <p className="muted settings-text">
+              Calls the server the same way your AI app will{fresh ? ", using your new key" : ""}.
+            </p>
+            <div className="settings-row">
+              <Field label="Server URL">
+                <div className="input mono-input"><CopyText text={url} /></div>
+              </Field>
+              <button className="btn" onClick={testConnection} disabled={test.state === "busy"}>
+                {test.state === "busy" ? <Loader2 className="spin" /> : <Plug />} Test connection
+              </button>
+            </div>
+            {(test.state === "ok" || test.state === "fail") && (
+              <div className={`mcp-test ${test.state}`}>
+                {test.state === "ok" ? <Check /> : <CircleAlert />}
+                {test.text}
+              </div>
+            )}
+          </section>
+
+
 
           <section className="settings-card">
             <h2>Tools <span className="count-pill">{ALL_TOOLS.length}</span></h2>

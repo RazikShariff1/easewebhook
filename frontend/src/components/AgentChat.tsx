@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowUp, Check, ShieldQuestion, Sparkles } from "lucide-react";
+import { ArrowUp, Check, ChevronDown, ChevronRight, Plus, ShieldQuestion } from "lucide-react";
+import { WindowDots } from "./WindowDots";
 
 /**
  * An animated replay of a real AI-agent session using the EaseWebhook MCP server:
@@ -9,11 +10,11 @@ import { ArrowUp, Check, ShieldQuestion, Sparkles } from "lucide-react";
 
 const QUESTION = "My Razorpay webhooks aren't reaching my orders service. What's wrong?";
 
-const CALLS: { tool: string; args?: string; result: string }[] = [
-  { tool: "get_overview", result: "2 requests · 2 events FAILED" },
-  { tool: "list_connections", result: "razorpay-prod → orders-service · active" },
-  { tool: "list_events", args: 'status: "FAILED"', result: "2 events" },
-  { tool: "get_event", args: '"evt_Rn5Y…"', result: "2 attempts · HTTP 401" },
+const CALLS: { tool: string; label: string; args?: string; result: string }[] = [
+  { tool: "get_overview", label: "Get account overview", result: "2 requests · 2 events FAILED" },
+  { tool: "list_connections", label: "Find the Razorpay connection", result: "razorpay-prod → orders-service · active" },
+  { tool: "list_events", label: "List failed events", args: 'status: "FAILED"', result: "2 events" },
+  { tool: "get_event", label: "Inspect a failed event", args: '"evt_Rn5Y…"', result: "2 attempts · HTTP 401" },
 ];
 
 const ANSWER =
@@ -52,54 +53,71 @@ export function AgentChat({ compact = false, composer = false, onTool }: { compa
     onTool?.(current, usedKey ? usedKey.split(",") : []);
   }, [current, usedKey, onTool]);
 
+  const working = tick >= T_CALLS && tick < T_CALLS + CALLS.length;
+  const running = working ? CALLS[Math.max(0, shownCalls - 1)] : null;
+  const elapsed = Math.max(1, Math.round((tick - T_CALLS + 1) * 0.7 * 3));
+
   return (
-    <div className={`agent-chat ${compact ? "compact" : ""}`} aria-label="Example: an AI agent debugging failed webhooks with the EaseWebhook MCP server">
-      <div className="ac-bar">
-        <i /><i /><i />
-        <span>Claude · easewebhook MCP</span>
-      </div>
-      <div className="ac-body">
-        <div className="ac-msg user">{QUESTION}</div>
-
-        {tick >= T_CALLS && (
-          <div className="ac-calls">
-            {CALLS.slice(0, shownCalls).map((c, i) => {
-              const done = i < shownCalls - 1 || tick >= T_CALLS + CALLS.length;
-              return (
-                <div key={c.tool} className={`ac-call ${done ? "done" : "running"}`}>
-                  <span className="ac-state">{done ? <Check size={11} strokeWidth={3} /> : <span className="ac-spin" />}</span>
-                  <code>{c.tool}</code>
-                  {c.args && <span className="ac-args">{c.args}</span>}
-                  {done && <span className="ac-result">{c.result}</span>}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {tick >= T_ANSWER && (
-          <div className="ac-msg agent">
-            <Sparkles size={14} />
-            <span>{ANSWER}</span>
-          </div>
-        )}
-
-        {tick >= T_ASK && (
-          <div className="ac-approve">
-            <ShieldQuestion size={15} />
-            <span>
-              Retry the 2 failed events? <code>retry_event</code> re-sends webhooks to your server.
-            </span>
-            <b>Allow</b>
-          </div>
-        )}
-      </div>
-      {composer && (
-        <div className="ac-composer" aria-hidden="true">
-          <span>Ask about your webhooks…</span>
-          <i><ArrowUp size={14} strokeWidth={2.5} /></i>
+    <div className={`agent-chat dk ${compact ? "compact" : ""}`} aria-label="Example: an AI agent debugging failed webhooks with the EaseWebhook MCP server">
+      <div className="dk-main">
+        <div className="dk-top">
+          <WindowDots />
+          <span>Debug Razorpay webhooks</span>
+          <ChevronDown size={13} />
+          <em className="dk-mcp"><i />easewebhook MCP</em>
         </div>
-      )}
+
+        <div className="dk-body">
+          <div className="dk-msg user">{QUESTION}</div>
+
+          {tick >= T_CALLS && (
+            <div className="dk-plan">
+              <div className="dk-plan-h">Plan</div>
+              {CALLS.map((c, i) => {
+                const state = i < doneCount ? "done" : i === shownCalls - 1 && working ? "run" : "todo";
+                return (
+                  <div key={c.tool} className={`dk-task ${state}`}>
+                    <span className="dk-tick">
+                      {state === "done" ? <Check size={11} strokeWidth={3} /> : state === "run" ? <><i /><i /><i /></> : null}
+                    </span>
+                    <span className="dk-task-l">{c.label}</span>
+                    {state === "done" && <em>{c.result}</em>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {running && (
+            <div className="dk-working">
+              <span className="dk-dots" aria-hidden="true"><i /><i /><i /><i /></span>
+              <span>Calling <code>{running.tool}</code></span>
+              <small>{elapsed}s</small>
+              <ChevronRight size={13} />
+            </div>
+          )}
+
+          {tick >= T_ANSWER && <div className="dk-msg agent">{ANSWER}</div>}
+
+          {tick >= T_ASK && (
+            <div className="dk-approve">
+              <div className="dk-approve-q">
+                <ShieldQuestion size={15} />
+                <span>Allow <code>retry_event</code>? It re-sends the 2 failed webhooks to your server.</span>
+              </div>
+              <div className="dk-approve-a"><b className="deny">Deny</b><b>Allow</b></div>
+            </div>
+          )}
+        </div>
+
+        {composer && (
+          <div className="dk-composer" aria-hidden="true">
+            <Plus size={15} />
+            <span>Ask about your webhooks…</span>
+            <i><ArrowUp size={13} strokeWidth={2.5} /></i>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

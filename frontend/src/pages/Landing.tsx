@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowLeft, RotateCw, Link2, Search, Send, PenLine, ListChecks, Gauge, ScanSearch, SlidersHorizontal, RotateCcw, Check, ChevronRight, Code2, Telescope, Bot, ShieldCheck, Copy } from "lucide-react";
-import { siClaude, siCursor, type SimpleIcon } from "simple-icons";
 import { AgentChat } from "../components/AgentChat";
+import { WindowDots } from "../components/WindowDots";
+import { AgentClientPicker } from "../components/AgentClientPicker";
+import { AGENT_CLIENTS, clientById } from "../lib/agentClients";
 import { ALL_TOOLS, type Kind } from "../lib/mcpTools";
 import { Logo } from "../components/Logo";
 import { useAuth } from "../lib/auth";
@@ -153,6 +155,7 @@ export function LandingPage() {
             <Cell icon={<ListChecks />} title="Show every attempt, replay failures">
               <div className="lp-card pad lp-browser">
                 <div className="lp-bbar">
+                  <WindowDots />
                   <ArrowLeft size={15} /><ArrowRight size={15} /><RotateCw size={14} />
                   <span className="url"><Link2 size={13} />app.easewebhook.com/events</span>
                 </div>
@@ -219,7 +222,7 @@ export function LandingPage() {
 
             <Cell icon={<ScanSearch />} title="Debug every delivery">
               <div className="lp-portal">
-                <div className="bar mono"><span>←</span><span>→</span><span>↻</span><em>easewebhook.app/events</em></div>
+                <div className="bar mono"><WindowDots /><span>←</span><span>→</span><span>↻</span><em>easewebhook.app/events</em></div>
                 <div className="body">
                   <div className="ttl">Events <span className="mono">24</span></div>
                   <div className="tools"><span className="search">Filter…</span><span className="retry"><RotateCcw size={12} /> Retry</span></div>
@@ -309,7 +312,7 @@ function Cell({ icon, title, children }: { icon: React.ReactNode; title: string;
 }
 
 const SRC = [
-  { y: 50, name: "shopify", logo: "shopify", color: "#1a1a1a" },
+  { y: 50, name: "shopify", logo: "shopify", color: "#95bf47" },
   { y: 140, name: "stripe", logo: "stripe", color: "#635bff" },
   { y: 230, name: "twilio", logo: "twilio", color: "#e0334c" },
 ];
@@ -826,8 +829,8 @@ function Globe({ live, origins }: { live: string[]; origins: { country: string; 
       >
         <defs>
           <radialGradient id="lp-gfill" cx="50%" cy="20%" r="80%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#f3f3f1" />
+            <stop offset="0%" stopColor="#1a1a20" />
+            <stop offset="100%" stopColor="#0d0d10" />
           </radialGradient>
           <linearGradient id="lp-gfade" x1="0" y1="0" x2="0" y2="1">
             <stop offset="62%" stopColor="#fff" stopOpacity="1" />
@@ -949,14 +952,14 @@ function ProductionSection() {
             <li><span><Bot /></span>Built for apps and agents</li>
           </ul>
           <div className="lp-term">
-            <div className="lp-term-bar mono"><i /><i /><i />terminal</div>
+            <div className="lp-term-bar mono"><WindowDots />terminal</div>
             <div className="lp-term-body mono">
               <small>~/dev</small>
               <div><span className="typed">add event_type to the shopify transform</span><em /></div>
             </div>
           </div>
           <div className="lp-term lp-tx">
-            <div className="lp-term-bar mono">TRANSFORMATION · SHOPIFY → LOCAL</div>
+            <div className="lp-term-bar mono"><WindowDots />TRANSFORMATION · SHOPIFY → LOCAL</div>
             <pre className="lp-term-body mono">{`function handler(req) {
   req.body.event_details = [{
     date: req.body.created_at,
@@ -1029,38 +1032,16 @@ const DOING: Record<string, string> = {
 
 const KIND_LABEL: Record<Kind, string> = { read: "READ", write: "WRITE", destructive: "DESTRUCTIVE" };
 
-type AgentClient = { id: string; name: string; icon: SimpleIcon | null; text: string };
-
-const AGENT_CLIENTS: AgentClient[] = [
-  {
-    id: "claude-code",
-    name: "Claude Code",
-    icon: null,
-    text: `claude mcp add --transport http easewebhook \\\n  ${MCP_URL} \\\n  --header "Authorization: Bearer <your API key>"`,
-  },
-  {
-    id: "cursor",
-    name: "Cursor",
-    icon: siCursor,
-    text: `{\n  "mcpServers": {\n    "easewebhook": {\n      "url": "${MCP_URL}",\n      "headers": { "Authorization": "Bearer <your API key>" }\n    }\n  }\n}`,
-  },
-  {
-    id: "claude-desktop",
-    name: "Claude Desktop",
-    icon: siClaude,
-    text: `{\n  "mcpServers": {\n    "easewebhook": {\n      "command": "npx",\n      "args": ["-y", "mcp-remote", "${MCP_URL}",\n        "--header", "Authorization: Bearer <your API key>"]\n    }\n  }\n}`,
-  },
-];
-
 function AgentsSection({ user }: { user: boolean }) {
   const [client, setClient] = useState(AGENT_CLIENTS[0].id);
+  const snippetFor = (id: string) => clientById(id).snippet(MCP_URL, "<your API key>");
   const [copied, setCopied] = useState(false);
   const [live, setLive] = useState<{ tool: string | null; used: string[] }>({ tool: null, used: [] });
   const onTool = useCallback((tool: string | null, used: string[]) => setLive({ tool, used }), []);
-  const active = AGENT_CLIENTS.find((c) => c.id === client)!;
+  const active = clientById(client);
 
   const copy = () => {
-    navigator.clipboard?.writeText(active.text).then(() => {
+    navigator.clipboard?.writeText(snippetFor(client)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     });
@@ -1148,24 +1129,17 @@ function AgentsSection({ user }: { user: boolean }) {
             </ol>
           </div>
           <div className="ag-term">
-            <div className="ag-tabs" role="tablist">
-              {AGENT_CLIENTS.map((c) => (
-                <button key={c.id} role="tab" aria-selected={c.id === client} className={c.id === client ? "on" : ""} onClick={() => setClient(c.id)}>
-                  {c.icon ? (
-                    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d={c.icon.path} fill={c.icon.hex === "000000" ? "currentColor" : `#${c.icon.hex}`} /></svg>
-                  ) : (
-                    <Code2 size={14} />
-                  )}
-                  {c.name}
-                </button>
-              ))}
-              <button className="copy" onClick={copy} aria-label="Copy snippet">
+            <div className="ag-titlebar">
+              <WindowDots />
+              <AgentClientPicker value={client} onChange={setClient} />
+              <span className="ag-file mono">{active.file}</span>
+              <button className="ag-copy" onClick={copy} aria-label="Copy snippet">
                 {copied ? <><Check size={13} strokeWidth={3} /> Copied</> : <><Copy size={13} /> Copy</>}
               </button>
             </div>
             <div className="ag-term-body">
               {AGENT_CLIENTS.map((c) => (
-                <pre key={c.id} className={`mono ${c.id === client ? "on" : ""}`} aria-hidden={c.id !== client}>{c.text}</pre>
+                <pre key={c.id} className={`mono ${c.id === client ? "on" : ""}`} aria-hidden={c.id !== client}>{snippetFor(c.id)}</pre>
               ))}
             </div>
           </div>

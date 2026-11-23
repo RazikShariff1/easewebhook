@@ -26,7 +26,9 @@
   --info-bg: rgba(255, 255, 255, 0.08);
   --info-border: rgba(255, 255, 255, 0.24);
   --neutral-bg: rgba(255, 255, 255, 0.06);
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* One typeface site-wide: --mono now resolves to Inter; real monospace is kept only for code blocks via --code. */
+  --code: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --mono: var(--sans);
   --sans: "Inter", system-ui, -apple-system, sans-serif;
   --radius: 6px;
   color-scheme: dark;
@@ -36,6 +38,7 @@
 html, body, #root { height: 100%; }
 body {
   margin: 0;
+  font-variant-numeric: tabular-nums;
   background: var(--bg);
   color: var(--text);
   font: 14px/1.45 var(--sans);
@@ -1146,3 +1149,54 @@ main.main { display: flex; flex-direction: column; min-width: 0; overflow: hidde
   .ai-page .settings-row .field { flex-basis: 100%; }
   .ai-page .hide-sm { display: none; }
 }
+
+/* Multi-line code keeps a monospace face so indentation and columns line up. */
+pre, pre *, .cr-editor, .jt-raw, .lp-dcode, .lp-dcode *, .lp-term-body, .lp-term-body * { font-family: var(--code) !important; }
+
+/* Mock window controls, used on every fake app/terminal/browser window */
+.win-dots { display: inline-flex; align-items: center; gap: 7px; flex: none; }
+.win-dots i { display: block; width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.25); }
+.win-dots i:nth-child(2) { background: #febc2e; }
+.win-dots i:nth-child(3) { background: #28c840; }
+
+/* AI client dropdown (landing setup box and the AI agents page) */
+.ag-pick { position: relative; flex: none; }
+.ag-pick-btn { display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px 5px 10px; border: 1px solid var(--border-strong); border-radius: 7px; background: var(--bg-elev); color: var(--text); font: 500 12.5px var(--sans); cursor: pointer; white-space: nowrap; }
+.ag-pick-btn:hover { border-color: #4a4a4a; }
+.ag-pick-btn > svg:last-child { color: var(--text-muted); transition: transform .15s; }
+.ag-pick-btn > svg.up { transform: rotate(180deg); }
+.ag-pick-menu { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; width: 330px; max-width: calc(100vw - 48px); display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 5px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--bg-elev); box-shadow: 0 16px 40px rgba(0,0,0,.55); }
+.ag-pick-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 9px; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); font: 500 12.5px var(--sans); text-align: left; cursor: pointer; }
+.ag-pick-menu button span { flex: 1; }
+.ag-pick-menu button:hover { background: var(--bg-active); color: var(--text); }
+.ag-pick-menu button.on { color: var(--text); }
+.ag-pick-menu button > svg:last-child:not(:first-child) { color: var(--text-muted); }
+
+/* ---------- AI agents page ---------- */
+.ai-intro { display: flex; align-items: center; gap: 24px; padding: 22px 24px; border: 1px solid var(--border); border-radius: 12px;
+  background: radial-gradient(ellipse 70% 120% at 0% 0%, rgba(123,155,255,.10), transparent 60%), var(--bg-sidebar); }
+.ai-intro h2 { margin: 0 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.ai-intro p { margin: 0; font-size: 13.5px; line-height: 1.6; max-width: 620px; }
+.ai-intro-stats { display: flex; gap: 10px; margin-left: auto; flex: none; }
+.ai-intro-stats div { display: flex; flex-direction: column; align-items: center; min-width: 76px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.ai-intro-stats strong { font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+.ai-intro-stats span { font-size: 11.5px; color: var(--text-muted); }
+.step-num { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 10px; border-radius: 50%; border: 1px solid var(--border-strong);
+  background: var(--bg-elev); font-size: 11px; font-weight: 600; color: var(--text-muted); vertical-align: 1px; }
+.ai-page .settings-card h2 { display: flex; align-items: center; }
+.key-filled { display: inline-flex; align-items: center; gap: 5px; color: var(--success); }
+.key-filled svg { width: 13px; height: 13px; }
+
+.agent-box { position: relative; border: 1px solid var(--border-strong); border-radius: 10px; background: #141414; }
+.agent-box-bar { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); border-radius: 10px 10px 0 0; }
+.agent-box-file { flex: 1; min-width: 0; text-align: right; font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agent-box-code { margin: 0; padding: 16px 18px; font-size: 12.5px; line-height: 1.7; color: #d9d9d4; overflow-x: auto; white-space: pre; border-radius: 0 0 10px 10px; }
+@media (max-width: 640px) {
+  .ai-intro { flex-direction: column; align-items: flex-start; }
+  .ai-intro-stats { margin-left: 0; }
+  .agent-box-file { display: none; }
+  .agent-box-bar .btn { margin-left: auto; }
+  .agent-box .ag-pick { position: static; }
+  .agent-box .ag-pick-menu { top: 46px; left: 8px; right: 8px; width: auto; max-width: none; }
+}
+.key-hint { margin-top: -6px; }
