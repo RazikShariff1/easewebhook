@@ -1,4 +1,4 @@
-package main
+package mcpserver
 
 import (
 	"context"
@@ -192,8 +192,8 @@ func (f eventFilter) empty() bool {
 // Tools
 // ---------------------------------------------------------------------------
 
-func registerTools(s *mcp.Server, c *Client) {
-	registerWorkspaceTools(s, c)
+func registerTools(s *mcp.Server, c *Client, o Options) {
+	registerWorkspaceTools(s, c, o)
 	registerSourceTools(s, c)
 	registerDestinationTools(s, c)
 	registerConnectionTools(s, c)
@@ -202,7 +202,7 @@ func registerTools(s *mcp.Server, c *Client) {
 	registerEventTools(s, c)
 }
 
-func registerWorkspaceTools(s *mcp.Server, c *Client) {
+func registerWorkspaceTools(s *mcp.Server, c *Client, o Options) {
 	add(s, "list_workspaces",
 		"List the EaseWebhook workspaces this account belongs to, and show which one is currently in use. All other tools act on the current workspace.",
 		readOnly, func(ctx context.Context, _ noInput) (any, error) {
@@ -214,22 +214,26 @@ func registerWorkspaceTools(s *mcp.Server, c *Client) {
 			return map[string]any{"current_workspace_id": c.workspaceID, "workspaces": data}, nil
 		})
 
-	add(s, "use_workspace",
-		"Switch the workspace that all other tools act on, for the rest of this session.",
-		write, func(ctx context.Context, in idInput) (any, error) {
-			if err := requireID(in.ID, "ws_"); err != nil {
-				return nil, err
-			}
+	// Switching only makes sense when one server lives for a whole session (stdio); the hosted
+	// endpoint is stateless and its workspace comes from the API key.
+	if o.AllowWorkspaceSwitch {
+		add(s, "use_workspace",
+			"Switch the workspace that all other tools act on, for the rest of this session.",
+			write, func(ctx context.Context, in idInput) (any, error) {
+				if err := requireID(in.ID, "ws_"); err != nil {
+					return nil, err
+				}
 
-			data, err := c.Do(ctx, http.MethodGet, "/workspaces/"+url.PathEscape(in.ID), nil, nil)
-			if err != nil {
-				return nil, err
-			}
+				data, err := c.Do(ctx, http.MethodGet, "/workspaces/"+url.PathEscape(in.ID), nil, nil)
+				if err != nil {
+					return nil, err
+				}
 
-			c.workspaceID = in.ID
+				c.workspaceID = in.ID
 
-			return map[string]any{"now_using": data}, nil
-		})
+				return map[string]any{"now_using": data}, nil
+			})
+	}
 
 	add(s, "get_overview",
 		"Counters for the last 24 hours across the current workspace (requests, events, failures). A good first call to check overall health.",

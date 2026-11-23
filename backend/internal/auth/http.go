@@ -52,9 +52,22 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		uid, err := s.Verify(strings.TrimSpace(tok))
+		tok = strings.TrimSpace(tok)
+
+		uid, keyWS, err := s.CallerFromToken(r.Context(), tok)
 		if err != nil {
-			unauthorized(w, "session expired — log in again")
+			if IsAPIKey(tok) {
+				unauthorized(w, "invalid or revoked API key")
+			} else {
+				unauthorized(w, "session expired — log in again")
+			}
+
+			return
+		}
+
+		// API keys act in their own workspace only, and can't manage keys or workspace membership.
+		if keyWS != "" && apiKeyForbidden(r) {
+			writeErr(w, http.StatusForbidden, "API keys can't do this; use the dashboard")
 			return
 		}
 
@@ -63,7 +76,16 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 		if needsWorkspace(r.URL.Path) {
 			ws := r.Header.Get(WorkspaceHeader)
 			if ws == "" {
+				ws = keyWS
+			}
+
+			if ws == "" {
 				writeErr(w, http.StatusBadRequest, "missing "+WorkspaceHeader+" header")
+				return
+			}
+
+			if keyWS != "" && ws != keyWS {
+				writeErr(w, http.StatusForbidden, "this API key only works in workspace "+keyWS)
 				return
 			}
 
@@ -155,4 +177,6 @@ func (s *Service) Register(app *gofr.App) {
 	app.GET("/auth/me", func(c *gofr.Context) (any, error) {
 		return s.Me(c, s.db(c.SQL), UserID(c))
 	})
+
+	s.registerAPIKeys(app)
 }

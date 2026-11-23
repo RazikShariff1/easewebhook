@@ -1,4 +1,4 @@
-package main
+package mcpserver
 
 import (
 	"bytes"
@@ -106,8 +106,8 @@ func apiErrorMessage(raw []byte) string {
 	return strings.TrimSpace(string(raw))
 }
 
-// pickWorkspace chooses the first workspace the user belongs to, for when none is configured.
-func (c *Client) pickWorkspace(ctx context.Context) error {
+// PickWorkspace chooses the first workspace the user belongs to, for when none is configured.
+func (c *Client) PickWorkspace(ctx context.Context) error {
 	data, err := c.Do(ctx, http.MethodGet, "/workspaces", nil, nil)
 	if err != nil {
 		return err
@@ -143,3 +143,6 @@ func (c *Client) pickWorkspace(ctx context.Context) error {
 
 	return nil
 }
+
+// WorkspaceID is the workspace every tool acts on.
+func (c *Client) WorkspaceID() string { return c.workspaceID }

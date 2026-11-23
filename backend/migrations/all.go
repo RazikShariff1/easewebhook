@@ -10,5 +10,6 @@ func All() map[int64]migration.Migrate {
 		20261118000003: createWorkspaces(),
 		20261118000004: addSourceTypes(),
 		20261118000005: addDestinationTypes(),
+		20261123000001: createAPIKeys(),
 	}
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/zopping/easewebhook/backend/internal/delivery"
 	"github.com/zopping/easewebhook/backend/internal/handlers"
 	"github.com/zopping/easewebhook/backend/internal/ingest"
+	"github.com/zopping/easewebhook/backend/internal/mcpserver"
 	"github.com/zopping/easewebhook/backend/internal/store"
 	"github.com/zopping/easewebhook/backend/migrations"
 )
@@ -71,6 +72,21 @@ func main() {
 			return s.OnboardUser(ctx, uid, email, name)
 		},
 	}
+	// Hosted MCP endpoint (/mcp): AI agents connect with an API key; tools call this API over loopback
+	// with the same key, so they get exactly the caller's permissions.
+	mcpHTTP := &mcpserver.HTTP{
+		APIBase: "http://127.0.0.1:" + app.Config.GetOrDefault("HTTP_PORT", "8000"),
+		Authenticate: func(ctx context.Context, token string) (*mcpserver.Caller, error) {
+			uid, ws, err := authSvc.CallerFromToken(ctx, token)
+			if err != nil {
+				return nil, err
+			}
+
+			return &mcpserver.Caller{UserID: uid, WorkspaceID: ws}, nil
+		},
+	}
+	app.UseMiddleware(mcpHTTP.Middleware)
+
 	app.UseMiddleware(authSvc.Middleware)
 	authSvc.Register(app)
 
