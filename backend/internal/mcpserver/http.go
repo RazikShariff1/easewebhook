@@ -43,7 +43,15 @@ func (h *HTTP) init() {
 	h.handler = mcp.NewStreamableHTTPHandler(func(r *http.Request) *mcp.Server {
 		c, _ := r.Context().Value(clientKey{}).(*Client)
 		return NewServer(c, Options{})
-	}, &mcp.StreamableHTTPOptions{Stateless: true, JSONResponse: true})
+	}, &mcp.StreamableHTTPOptions{
+		Stateless:    true,
+		JSONResponse: true,
+		// The SDK's DNS-rebinding guard rejects requests that arrive on a loopback address with a
+		// public Host header. That is exactly how hosting platforms like Render deliver traffic
+		// (from a proxy on localhost), and the guard exists for unauthenticated local servers:
+		// every request here must carry a valid bearer token, so it adds nothing.
+		DisableLocalhostProtection: true,
+	})
 }
 
 // Middleware answers requests to /mcp and passes everything else on.
